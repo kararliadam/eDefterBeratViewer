@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML Berat PDF Dönüştürücü</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 XML Berat PDF Dönüştürücü</h1>
+            <p>XML dosyanızı yükleyin ve PDF formatına dönüştürün</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <div class="upload-box" id="uploadBox">
+                    <input type="file" id="fileInput" accept=".xml" hidden>
+                    <div class="upload-content">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p class="upload-text">Dosyayı buraya sürükleyin veya tıklayın</p>
+                        <p class="upload-hint">Sadece XML dosyaları (.xml)</p>
+                        <button class="btn-select" id="selectFileBtn">
+                            Dosya Seç
+                        </button>
+                    </div>
+                </div>
+
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <div class="file-details">
+                        <span class="file-icon">📄</span>
+                        <div class="file-text">
+                            <p class="file-name" id="fileName"></p>
+                            <p class="file-size" id="fileSize"></p>
+                        </div>
+                        <button class="btn-remove" id="removeFile">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" id="formSection" style="display: none;">
+                <div class="form-group">
+                    <label for="fileType">Dosya Türü:</label>
+                    <select id="fileType" class="form-select" required>
+                        <option value="">Seçiniz...</option>
+                        <option value="DR">DR - Defter Raporu</option>
+                        <option value="KB">KB - Büyük Defter Beratı</option>
+                        <option value="YB">YB - Yevmiye Beratı</option>
+                        <option value="K">K - Kebir Defteri</option>
+                        <option value="Y">Y - Yevmiye Defteri</option>
+                    </select>
+                </div>
+
+                <button class="btn-convert" id="convertBtn" disabled>
+                    <span class="btn-text">PDF İndir</span>
+                    <span class="btn-loader" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+                            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                        </svg>
+                    </span>
+                </button>
+                
+                <div class="result-message-inline" id="resultMessageInline" style="display: none;">
+                    <div class="success-message-inline">
+                        <span class="success-icon-inline">✅</span>
+                        <p id="resultMessageText"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="html-preview-section" id="htmlPreviewSection" style="display: none;">
+                <div class="html-preview-header">
+                    <h4>👁️ Önizleme</h4>
+                    <button class="btn-close-preview" id="closeHtmlPreviewBtn" title="Önizlemeyi Kapat">✕</button>
+                </div>
+                <div class="html-preview-loader" id="htmlPreviewLoader" style="display: none;">
+                    <div class="loader-spinner"></div>
+                    <p>Önizleme oluşuyor...</p>
+                </div>
+                <div class="html-preview-wrapper">
+                    <iframe id="htmlPreview" class="html-preview" frameborder="0"></iframe>
+                </div>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <div class="error-message">
+                    <span class="error-icon">❌</span>
+                    <h3>Hata Oluştu</h3>
+                    <p id="errorMessage"></p>
+                    <button class="btn-retry" onclick="resetForm()">Tekrar Dene</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

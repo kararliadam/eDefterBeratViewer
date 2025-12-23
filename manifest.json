@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "XML Berat PDF Dönüştürücü",
+  "version": "1.0.0",
+  "description": "E-defter berat XML dosyalarını PDF formatına dönüştürür",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "contextMenus",
+    "scripting"
+  ],
+  "host_permissions": [
+    "file://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "XML Berat PDF Dönüştürücü"
+  },
+  "content_scripts": [
+    {
+      "matches": ["file://*/*.xml", "file://*/*.XML"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "xslt/*.xslt",
+        "css/*.css",
+        "viewer.html"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
