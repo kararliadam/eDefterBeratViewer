@@ -22,14 +22,14 @@ Bu Chrome Extension, e-defter berat XML dosyalarını PDF formatına dönüştü
 2. Adres çubuğuna `chrome://extensions/` yazın ve Enter'a basın
 3. Sağ üst köşede "Geliştirici modu" (Developer mode) seçeneğini açın
 4. "Paketlenmemiş uzantı yükle" (Load unpacked) butonuna tıklayın
-5. `extension` klasörünü seçin
+5. `manifest.json` dosyasının bulunduğu proje klasörünü seçin
 6. Extension yüklenecek ve Chrome toolbar'ında görünecektir
 
 ### 2. Icon Dosyalarını Ekleme (Opsiyonel)
 
 Extension'ın icon dosyalarını eklemek için:
 
-1. `extension/icons/` klasörüne aşağıdaki boyutlarda icon dosyaları ekleyin:
+1. Proje kökünde `icons/` klasörü oluşturup aşağıdaki boyutlarda icon dosyaları ekleyin:
    - `icon16.png` (16x16 piksel)
    - `icon48.png` (48x48 piksel)
    - `icon128.png` (128x128 piksel)
@@ -93,7 +93,7 @@ Eklenti, Chrome’un kaldırma planına karşı yerel WASM tabanlı XSLT polyfil
 
 ### Extension yüklenmiyor
 - `chrome://extensions/` sayfasında "Geliştirici modu"nun açık olduğundan emin olun
-- `extension` klasörünün doğru seçildiğinden emin olun
+- `manifest.json` dosyasının bulunduğu proje klasörünün doğru seçildiğinden emin olun
 
 ### XML dosyası otomatik dönüştürülmüyor
 - XML dosyasını Chrome'da açtığınızda extension'ın aktif olduğundan emin olun
@@ -102,7 +102,7 @@ Eklenti, Chrome’un kaldırma planına karşı yerel WASM tabanlı XSLT polyfil
 - Eğer çalışmazsa, popup yöntemini kullanabilirsiniz
 
 ### XSLT dosyası bulunamadı
-- `extension/xslt/` klasöründe tüm XSLT dosyalarının olduğundan emin olun
+- `xslt/` klasöründe tüm XSLT dosyalarının olduğundan emin olun
 - Dosya adlarının doğru olduğundan emin olun (küçük harf)
 
 ### PDF oluşturulamıyor
@@ -118,7 +118,7 @@ Eklenti, Chrome’un kaldırma planına karşı yerel WASM tabanlı XSLT polyfil
 
 Extension'ı geliştirmek için:
 
-1. `extension` klasöründeki dosyaları düzenleyin
+1. Proje kökündeki dosyaları düzenleyin
 2. `chrome://extensions/` sayfasında extension'ın yanındaki yenile (reload) butonuna tıklayın
 3. Değişiklikler otomatik olarak yüklenecektir
 

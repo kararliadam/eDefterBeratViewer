@@ -12,7 +12,7 @@
 
 3. **Extension'ı yükleyin**:
    - "Paketlenmemiş uzantı yükle" (Load unpacked) butonuna tıklayın
-   - `extension` klasörünü seçin
+   - Bu proje klasörünü seçin (`manifest.json` dosyasının bulunduğu klasör)
    - Extension yüklenecektir
 
 4. **Kullanmaya başlayın**:
@@ -23,20 +23,22 @@
 
 ### Adım 1: Extension Klasörünü Bulun
 
-Proje klasörünüzde `extension` klasörünü bulun:
+Proje klasörünü bulun:
 ```
-berat/
-└── extension/
-    ├── manifest.json
-    ├── popup.html
-    ├── popup.js
-    ├── popup.css
-    ├── xslt/
-    │   ├── berat.xslt
-    │   ├── defterraporu.xslt
-    │   ├── kebir.xslt
-    │   └── yevmiye.xslt
-    └── README.md
+XML-E-Defter-Viewer/
+├── manifest.json
+├── popup.html
+├── popup.js
+├── popup.css
+├── viewer.html
+├── viewer.js
+├── vendor/
+├── xslt/
+│   ├── berat.xslt
+│   ├── defterraporu.xslt
+│   ├── kebir.xslt
+│   └── yevmiye.xslt
+└── README.md
 ```
 
 ### Adım 2: Chrome Extensions Sayfasını Açın
@@ -53,10 +55,9 @@ Extensions sayfasının sağ üst köşesinde:
 ### Adım 4: Extension'ı Yükleyin
 
 1. "Paketlenmemiş uzantı yükle" (Load unpacked) butonuna tıklayın
-2. Açılan dosya seçici penceresinde:
-   - `berat` klasörüne gidin
-   - `extension` klasörünü seçin
-   - "Seç" (Select) butonuna tıklayın
+2. Açılan dosya seçici penceresinde `manifest.json` dosyasının bulunduğu
+   `XML-E-Defter-Viewer` klasörünü seçin
+3. "Seç" (Select) butonuna tıklayın
 
 ### Adım 5: Extension'ı Test Edin
 
@@ -69,12 +70,12 @@ Extensions sayfasının sağ üst köşesinde:
 
 ### "Hata: Manifest dosyası geçersiz" hatası
 
-- `manifest.json` dosyasının `extension` klasörünün içinde olduğundan emin olun
+- `manifest.json` dosyasının proje kökünde olduğundan emin olun
 - JSON syntax hatası olup olmadığını kontrol edin
 
 ### "XSLT dosyası bulunamadı" hatası
 
-- `extension/xslt/` klasöründe tüm XSLT dosyalarının olduğundan emin olun:
+- `xslt/` klasöründe tüm XSLT dosyalarının olduğundan emin olun:
   - `berat.xslt`
   - `defterraporu.xslt`
   - `kebir.xslt`

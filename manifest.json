@@ -5,10 +5,8 @@
   "description": "E-defter berat XML dosyalarını PDF formatına dönüştürür",
   "permissions": [
     "storage",
-    "activeTab",
     "tabs",
-    "contextMenus",
-    "scripting"
+    "contextMenus"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
@@ -35,7 +33,6 @@
     {
       "resources": [
         "xslt/*.xslt",
-        "css/*.css",
         "viewer.html"
       ],
       "matches": ["<all_urls>"]
