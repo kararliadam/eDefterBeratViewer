@@ -462,7 +462,8 @@ main {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.btn-convert {
+.btn-convert,
+.btn-print {
     width: auto;
     background: #fff;
     color: #315f8f;
@@ -479,11 +480,13 @@ main {
     gap: 10px;
 }
 
-.btn-convert:hover:not(:disabled) {
+.btn-convert:hover:not(:disabled),
+.btn-print:hover:not(:disabled) {
     background: #eef4fa;
 }
 
-.btn-convert:disabled {
+.btn-convert:disabled,
+.btn-print:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }

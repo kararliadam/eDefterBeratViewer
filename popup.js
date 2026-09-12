@@ -37,6 +37,7 @@ const fileSize = document.getElementById('fileSize');
 const formSection = document.getElementById('formSection');
 const fileTypeSelect = document.getElementById('fileType');
 const convertBtn = document.getElementById('convertBtn');
+const printBtn = document.getElementById('printBtn');
 const resultMessageInline = document.getElementById('resultMessageInline');
 const resultMessageText = document.getElementById('resultMessageText');
 const errorSection = document.getElementById('errorSection');
@@ -104,6 +105,7 @@ selectFileBtn.addEventListener('click', (e) => {
 // File Type Change
 fileTypeSelect.addEventListener('change', async () => {
     convertBtn.disabled = !fileTypeSelect.value;
+    printBtn.disabled = true;
     if (fileTypeSelect.value && currentXmlContent) {
         await showHtmlPreview(currentXmlContent, fileTypeSelect.value);
     } else {
@@ -113,6 +115,7 @@ fileTypeSelect.addEventListener('change', async () => {
 
 // Convert Button
 convertBtn.addEventListener('click', handleConvert);
+printBtn.addEventListener('click', handlePrint);
 
 // Close HTML Preview Button
 if (closeHtmlPreviewBtn) {
@@ -629,11 +632,13 @@ async function prepareXmlDocument(file, xmlContent, archiveEntry = null) {
     if (detectedType) {
         fileTypeSelect.value = detectedType;
         convertBtn.disabled = false;
+        printBtn.disabled = true;
         showDetectionInfo(detectedType);
         await showHtmlPreview(xmlContent, detectedType);
     } else {
         fileTypeSelect.value = '';
         convertBtn.disabled = true;
+        printBtn.disabled = true;
         hideDetectionInfo();
         hideHtmlPreview();
     }
@@ -812,6 +817,7 @@ function clearSelectedDocument(clearSelection = true) {
     }
     fileTypeSelect.value = '';
     convertBtn.disabled = true;
+    printBtn.disabled = true;
     formSection.style.display = 'none';
     hideDetectionInfo();
     hideHtmlPreview();
@@ -926,6 +932,20 @@ async function handleConvert() {
     }
 }
 
+function handlePrint() {
+    if (printBtn.disabled || !htmlPreview.contentWindow) {
+        return;
+    }
+
+    try {
+        htmlPreview.contentWindow.focus();
+        htmlPreview.contentWindow.print();
+    } catch (error) {
+        console.error('Yazdırma hatası:', error);
+        showError('Belge yazdırma ekranı açılamadı.');
+    }
+}
+
 /** HTML içeriğini yeni pencere açmadan PDF olarak indirir. */
 async function generateAndDownloadPdf(htmlContent, originalFileName) {
     await window.downloadHtmlAsPdf(htmlContent, originalFileName);
@@ -962,6 +982,7 @@ function resetForm() {
     fileInput.value = '';
     fileTypeSelect.value = '';
     convertBtn.disabled = true;
+    printBtn.disabled = true;
     
     fileInfo.style.display = 'none';
     formSection.style.display = 'none';
@@ -989,6 +1010,7 @@ async function showHtmlPreview(xmlContent, fileType) {
     }
     
     const requestId = ++previewRequestId;
+    printBtn.disabled = true;
 
     if (previewEmptyState) {
         previewEmptyState.style.display = 'none';
@@ -1048,6 +1070,11 @@ async function showHtmlPreview(xmlContent, fileType) {
             previewWrapper.style.display = 'block';
         }
         if (htmlPreview) {
+            htmlPreview.onload = () => {
+                if (requestId === previewRequestId && currentXmlContent) {
+                    printBtn.disabled = false;
+                }
+            };
             htmlPreview.src = url;
         }
         
@@ -1061,6 +1088,7 @@ async function showHtmlPreview(xmlContent, fileType) {
         if (htmlPreviewLoader) {
             htmlPreviewLoader.style.display = 'none';
         }
+        printBtn.disabled = true;
         showError(error.message || 'Önizleme oluşturulamadı');
     }
 }
@@ -1070,6 +1098,7 @@ async function showHtmlPreview(xmlContent, fileType) {
  */
 function hideHtmlPreview() {
     previewRequestId++;
+    printBtn.disabled = true;
     if (htmlPreviewSection) {
         htmlPreviewSection.style.display = 'none';
     }
@@ -1084,6 +1113,7 @@ function hideHtmlPreview() {
 
 function showPreviewEmptyState() {
     previewRequestId++;
+    printBtn.disabled = true;
     if (htmlPreviewSection) {
         htmlPreviewSection.style.display = 'none';
     }
