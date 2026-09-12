@@ -1,6 +1,6 @@
 /**
  * Content Script - XML dosyalarını Chrome'da açıldığında yakalar
- * ve otomatik olarak PDF görünümüne yönlendirir
+ * ve otomatik olarak belge görüntüleme ekranına yönlendirir
  * 
  * document_start'ta çalışır, böylece Chrome'un XSLT yükleme denemesini engeller
  */

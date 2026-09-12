@@ -25,7 +25,7 @@ const isWorkspacePage = Boolean(pendingFileId) ||
 
 if (isWorkspacePage) {
     document.body.classList.add('workspace-page');
-    document.title = 'XML Berat PDF Dönüştürücü';
+    document.title = 'eDefter Berat Görüntüleyici';
 }
 
 // DOM Elements
@@ -203,7 +203,7 @@ function detectFileTypeFromContent(xmlContent) {
 }
 
 /**
- * XSLT dosyasını extension'dan yükler
+ * XSLT dosyasını eklenti paketinden yükler
  */
 async function loadXsltFile(fileType) {
     const xsltFileName = xsltMapping[fileType];
@@ -240,7 +240,7 @@ async function initializeWorkspacePage() {
     const headerDescription = document.querySelector('header p');
     const uploadText = document.querySelector('.upload-text');
     if (headerDescription) {
-        headerDescription.textContent = 'XML belgelerinizi geniş ekranda inceleyin';
+        headerDescription.textContent = 'e-Defter berat belgelerinizi geniş ekranda inceleyin';
     }
     if (uploadText) {
         uploadText.textContent = 'Başka bir XML veya ZIP dosyası yükleyin';

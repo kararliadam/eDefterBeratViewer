@@ -1,5 +1,5 @@
 /**
- * PDF Viewer - XML dosyasını otomatik olarak PDF görünümüne dönüştürür
+ * Belge görüntüleyici - XML dosyasını otomatik olarak önizlemeye dönüştürür
  */
 
 // URL parametrelerini al
@@ -27,7 +27,7 @@ const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 const printBtn = document.getElementById('printBtn');
 
 /**
- * XSLT dosyasını extension'dan yükler
+ * XSLT dosyasını eklenti paketinden yükler
  */
 async function loadXsltFile(fileType) {
     const xsltFileName = xsltMapping[fileType];
@@ -57,7 +57,7 @@ async function xmlToHtml(xmlContent, xsltContent) {
 }
 
 /**
- * PDF görünümünü oluşturur
+ * Belge önizlemesini oluşturur
  */
 async function generatePreview() {
     try {
@@ -90,7 +90,7 @@ async function generatePreview() {
         
         // Eğer hala yoksa, hata göster
         if (!xmlContent) {
-            throw new Error('XML içeriği bulunamadı. Lütfen XML dosyasını extension popup\'ından yükleyin.');
+            throw new Error('XML içeriği bulunamadı. Lütfen XML dosyasını eklenti penceresinden yükleyin.');
         }
         
         // XSLT dosyasını yükle

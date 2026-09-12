@@ -1,4 +1,4 @@
-/* Direct client-side PDF export without opening a print window. */
+/* Yazdırma penceresi açmadan tarayıcı içinde doğrudan PDF dışa aktarımı. */
 (function () {
     let libraryPromise = null;
 

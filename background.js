@@ -3,9 +3,9 @@
  * XML dosyalarının otomatik dönüştürülmesi için gerekli işlemleri yönetir
  */
 
-// Extension yüklendiğinde
+// Eklenti yüklendiğinde
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('XML Berat PDF Dönüştürücü extension yüklendi');
+    console.log('eDefter Berat Görüntüleyici eklentisi yüklendi');
     
     // Context menu oluştur
     chrome.contextMenus.create({

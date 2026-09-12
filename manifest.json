@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "XML Berat PDF Dönüştürücü",
+  "name": "eDefter Berat Görüntüleyici",
   "version": "1.0.0",
-  "description": "E-defter berat XML dosyalarını PDF formatına dönüştürür",
+  "description": "e-Defter berat XML ve ZIP dosyalarını geniş ekranda görüntüler ve PDF olarak indirir",
   "permissions": [
     "storage",
     "tabs",
@@ -16,7 +16,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "XML Berat PDF Dönüştürücü"
+    "default_title": "eDefter Berat Görüntüleyici"
   },
   "content_scripts": [
     {

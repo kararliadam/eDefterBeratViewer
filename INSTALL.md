@@ -1,4 +1,4 @@
-# Chrome Extension Kurulum Talimatları
+# eDefter Berat Görüntüleyici Kurulum Talimatları
 
 ## Hızlı Kurulum
 
@@ -10,18 +10,18 @@
 2. **Geliştirici modunu açın**:
    - Sayfanın sağ üst köşesinde "Geliştirici modu" (Developer mode) toggle'ını açın
 
-3. **Extension'ı yükleyin**:
+3. **Eklentiyi yükleyin**:
    - "Paketlenmemiş uzantı yükle" (Load unpacked) butonuna tıklayın
    - Bu proje klasörünü seçin (`manifest.json` dosyasının bulunduğu klasör)
-   - Extension yüklenecektir
+   - Eklenti yüklenecektir
 
 4. **Kullanmaya başlayın**:
-   - Chrome toolbar'ında extension iconunu göreceksiniz
-   - Icona tıklayarak extension'ı açabilirsiniz
+   - Chrome araç çubuğunda eklenti simgesini göreceksiniz
+   - Simgeye tıklayarak eklentiyi açabilirsiniz
 
 ## Detaylı Adımlar
 
-### Adım 1: Extension Klasörünü Bulun
+### Adım 1: Proje Klasörünü Bulun
 
 Proje klasörünü bulun:
 ```
@@ -41,27 +41,27 @@ XML-E-Defter-Viewer/
 └── README.md
 ```
 
-### Adım 2: Chrome Extensions Sayfasını Açın
+### Adım 2: Chrome Eklentileri Sayfasını Açın
 
 Chrome tarayıcınızda:
 - Adres çubuğuna `chrome://extensions/` yazın
 - Veya menüden: **Üç nokta (⋮) > Diğer araçlar > Uzantılar**
 
-### Adım 3: Geliştirici Modunu Aktifleştirin
+### Adım 3: Geliştirici Modunu Etkinleştirin
 
-Extensions sayfasının sağ üst köşesinde:
+Eklentiler sayfasının sağ üst köşesinde:
 - "Geliştirici modu" (Developer mode) toggle'ını **AÇIK** konuma getirin
 
-### Adım 4: Extension'ı Yükleyin
+### Adım 4: Eklentiyi Yükleyin
 
 1. "Paketlenmemiş uzantı yükle" (Load unpacked) butonuna tıklayın
 2. Açılan dosya seçici penceresinde `manifest.json` dosyasının bulunduğu
    `XML-E-Defter-Viewer` klasörünü seçin
 3. "Seç" (Select) butonuna tıklayın
 
-### Adım 5: Extension'ı Test Edin
+### Adım 5: Eklentiyi Test Edin
 
-1. Chrome toolbar'ında extension iconunu görmelisiniz
+1. Chrome araç çubuğunda eklenti simgesini görmelisiniz
 2. Icona tıklayın
 3. Popup penceresi açılmalı
 4. Bir XML dosyası seçerek test edin
@@ -81,33 +81,33 @@ Extensions sayfasının sağ üst köşesinde:
   - `kebir.xslt`
   - `yevmiye.xslt`
 
-### Extension görünmüyor
+### Eklenti görünmüyor
 
-- `chrome://extensions/` sayfasında extension'ın yüklü olduğundan emin olun
-- Extension'ın etkin (enabled) olduğundan emin olun
+- `chrome://extensions/` sayfasında eklentinin yüklü olduğundan emin olun
+- Eklentinin etkin olduğundan emin olun
 - Chrome'u yeniden başlatmayı deneyin
 
 ### Popup açılmıyor
 
 - Tarayıcı konsolunu açın (F12) ve hata mesajlarını kontrol edin
-- Extension'ı yeniden yükleyin (reload butonuna tıklayın)
+- Eklentiyi yeniden yükleyin (Yenile düğmesine tıklayın)
 
-## Extension'ı Güncelleme
+## Eklentiyi Güncelleme
 
-Extension'da değişiklik yaptıktan sonra:
+Eklentide değişiklik yaptıktan sonra:
 
 1. `chrome://extensions/` sayfasına gidin
-2. Extension'ın yanındaki **Yenile (Reload)** butonuna tıklayın
+2. Eklentinin yanındaki **Yenile** düğmesine tıklayın
 3. Değişiklikler otomatik olarak yüklenecektir
 
-## Extension'ı Kaldırma
+## Eklentiyi Kaldırma
 
 1. `chrome://extensions/` sayfasına gidin
-2. Extension'ın yanındaki **Kaldır (Remove)** butonuna tıklayın
+2. Eklentinin yanındaki **Kaldır** düğmesine tıklayın
 3. Onaylayın
 
 ## Notlar
 
-- Extension tamamen yerel olarak çalışır, internet bağlantısı sadece Google Fonts için gereklidir
+- Eklenti tamamen yerel olarak çalışır, internet bağlantısı sadece Google Fonts için gereklidir
 - Tüm işlemler tarayıcıda gerçekleşir, hiçbir veri dışarı gönderilmez
-- Extension'ı Chrome Web Store'a yüklemek isterseniz, icon dosyalarını eklemeniz gerekir
+- Eklentiyi Chrome Web Store'a yüklemek isterseniz, simge dosyalarını eklemeniz gerekir
