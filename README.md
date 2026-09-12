@@ -2,6 +2,16 @@
 
 Bu Chrome eklentisi, e-Defter berat XML dosyalarını ve ZIP arşivlerini geniş ekranda görüntülemenizi, önizlemenizi ve PDF olarak indirmenizi sağlar.
 
+## Ekran Görüntüleri
+
+| Dosya yükleme | ZIP filtreleri ve seçim ekranı |
+| --- | --- |
+| ![XML veya ZIP dosyası yükleme ekranı](screenshots/01-workspace-upload.png) | ![ZIP içindeki XML dosyalarını filtreleme ve seçme ekranı](screenshots/02-zip-filters-wireframe.png) |
+
+| Defter raporu önizlemesi | Büyük defter beratı önizlemesi |
+| --- | --- |
+| ![Demo bilgilerle defter raporu önizlemesi](screenshots/03-demo-pdf-preview.png) | ![Demo bilgilerle büyük defter beratı önizlemesi](screenshots/04-demo-kb-preview.png) |
+
 ## Özellikler
 
 - **Otomatik Görüntüleme**: XML dosyasını Chrome'da açtığınızda belge görüntüleme ekranı otomatik olarak açılır
