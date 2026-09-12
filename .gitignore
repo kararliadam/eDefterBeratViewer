@@ -1,0 +1,8 @@
+# macOS metadata
+.DS_Store
+
+# Local test archive
+/01.01.2024-31.12.2024.zip
+
+# Packaged extension builds
+/dist/
