@@ -4,14 +4,15 @@ Bu Chrome Extension, e-defter berat XML dosyalarını PDF formatına dönüştü
 
 ## Özellikler
 
-- 🚀 **Otomatik Dönüştürme**: XML dosyasını Chrome'da açtığınızda otomatik olarak PDF görünümüne dönüştürülür
-- 📤 Drag & Drop dosya yükleme
-- 🔍 Otomatik dosya türü tespiti (dosya adından ve XML içeriğinden)
-- 📋 Dosya türü seçimi (DR, KB, YB, K, Y) - otomatik tespit edilen türü manuel olarak değiştirebilirsiniz
-- 👁️ HTML önizleme - PDF oluşturmadan önce görünümü kontrol edin
-- 📥 PDF indirme - Chrome'un print dialog'u ile PDF olarak kaydedin
-- 🖨️ Direkt yazdırma desteği
-- 🎨 Modern ve kullanıcı dostu arayüz
+- **Otomatik Dönüştürme**: XML dosyasını Chrome'da açtığınızda otomatik olarak PDF görünümüne dönüştürülür
+- Drag & Drop dosya yükleme
+- XML ve toplu ZIP dosyaları için popup'tan tam sayfa çalışma ekranına geçiş
+- Otomatik dosya türü tespiti (dosya adından ve XML içeriğinden)
+- Dosya türü seçimi (DR, KB, YB, K, Y) - otomatik tespit edilen türü manuel olarak değiştirebilirsiniz
+- HTML önizleme - PDF oluşturmadan önce görünümü kontrol edin
+- PDF indirme - Önizlemeden doğrudan PDF dosyası indirme
+- Direkt yazdırma desteği
+- Modern ve kullanıcı dostu arayüz
 
 ## Kurulum
 
@@ -48,13 +49,23 @@ Extension'ın icon dosyalarını eklemek için:
 ### Yöntem 2: Popup ile Kullanım
 
 1. Chrome toolbar'ındaki extension iconuna tıklayın
-2. Açılan popup pencerede XML dosyanızı sürükleyip bırakın veya "Dosya Seç" butonuna tıklayın
-3. Sistem otomatik olarak dosya türünü tespit edecektir (isterseniz manuel olarak değiştirebilirsiniz)
-4. HTML önizlemesi otomatik olarak gösterilecektir
-5. "PDF İndir" butonuna tıklayın
-6. Chrome'un print dialog'u açılacaktır
-7. "Hedef" (Destination) olarak "PDF olarak kaydet" (Save as PDF) seçin
-8. PDF'i kaydedin
+2. Açılan popup pencerede XML dosyanızı sürükleyip bırakın veya "XML / ZIP Seç" butonuna tıklayın
+3. Dosya normal boyutlu yeni bir uzantı sekmesine aktarılır
+4. Sistem dosya türünü otomatik tespit eder; gerekirse sol panelden değiştirebilirsiniz
+5. Önizleme başlığındaki "PDF İndir" butonuna tıklayın
+6. PDF dosyası otomatik olarak indirilecektir
+
+### Yöntem 3: Toplu ZIP ile Kullanım
+
+1. Extension popup'ını açın
+2. ZIP dosyanızı sürükleyip bırakın veya "XML / ZIP Seç" butonunu kullanın
+3. ZIP, popup'tan normal boyutlu yeni bir uzantı sekmesine aktarılır; dosyayı yeniden seçmeniz gerekmez
+4. ZIP'in klasörlerindeki ve en fazla 3 seviye iç içe ZIP'lerdeki XML dosyaları listelenir
+5. Belge türü (DR, K, KB, Y, YB) ve dönem tarihi filtreleriyle listeyi daraltın
+6. Listeden bir XML'e tıklayarak türünü ve önizlemesini görüntüleyin
+7. Seçili XML'i önizleme başlığındaki "PDF İndir" butonuyla doğrudan PDF olarak indirin
+
+Güvenli ve akıcı kullanım için ZIP boyutu 50 MB, her XML dosyası 10 MB ve arşiv başına liste 500 XML ile sınırlıdır. Şifreli ZIP dosyaları desteklenmez.
 
 ## Desteklenen Dosya Türleri
 
@@ -69,15 +80,16 @@ Extension'ın icon dosyalarını eklemek için:
 ## Teknik Detaylar
 
 - **Manifest Version**: 3
-- **XSLT İşleme**: Client-side (XSLTProcessor API)
-- **PDF Oluşturma**: Chrome Print API
+- **XSLT İşleme**: Client-side (yerel WASM XSLT polyfill)
+- **PDF Oluşturma**: Yerel html2canvas + jsPDF ile doğrudan A4 PDF üretimi
 - **Dosya Okuma**: FileReader API
+- **ZIP Okuma**: JSZip 3.10.1 (extension içinde yerel olarak paketlenmiştir)
 - **Türkçe Karakter Desteği**: Open Sans fontu (Google Fonts)
 
 ## Sorun Giderme
 
 ### XSLT Uyarısı (crbug.com/435623334)
-Chrome, XSLTProcessor kullanımı hakkında bir uyarı gösterebilir. Bu normaldir ve extension şu an için tam fonksiyonel çalışıyor. Bu sadece bir bilgilendirme uyarısıdır ve görmezden gelebilirsiniz. Detaylı bilgi için `NOTES.md` dosyasına bakın.
+Eklenti, Chrome’un kaldırma planına karşı yerel WASM tabanlı XSLT polyfill’i kullanır. Yeni dönüşümlerde native `XSLTProcessor` uyarısı oluşmamalıdır. Daha önce oluşmuş kayıtlar Chrome’un eklenti hataları ekranında kalabilir; bir kez “Tümünü temizle” ile silinebilir.
 
 ### Extension yüklenmiyor
 - `chrome://extensions/` sayfasında "Geliştirici modu"nun açık olduğundan emin olun
@@ -94,8 +106,8 @@ Chrome, XSLTProcessor kullanımı hakkında bir uyarı gösterebilir. Bu normald
 - Dosya adlarının doğru olduğundan emin olun (küçük harf)
 
 ### PDF oluşturulamıyor
-- Chrome'un print dialog'unun açıldığından emin olun
-- Popup blocker'ın kapalı olduğundan emin olun
+- Eklentiyi `chrome://extensions/` üzerinden yenileyip tekrar deneyin
+- İndirilenler klasöründe dosyanın oluştuğunu kontrol edin
 - Tarayıcı konsolunda hata mesajlarını kontrol edin (F12)
 
 ### Türkçe karakterler görünmüyor
@@ -115,7 +127,7 @@ Extension'ı geliştirmek için:
 - Extension tamamen client-side çalışır, sunucuya veri göndermez
 - Tüm işlemler tarayıcıda gerçekleşir
 - Dosyalar sadece yerel olarak işlenir, hiçbir veri dışarı gönderilmez
-- PDF oluşturma için Chrome'un print dialog'u kullanılır
+- PDF, tarayıcı yazdırma penceresi açılmadan yerel olarak oluşturulup indirilir. Kanvas ve PDF boyutu doğrulanır; boş çıktı oluşursa indirme başarısız olarak bildirilir.
 
 ## Lisans
 
