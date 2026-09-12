@@ -35,7 +35,9 @@ async function loadXsltFile(fileType) {
         throw new Error(`Geçersiz dosya türü: ${fileType}`);
     }
     
-    const xsltUrl = chrome.runtime.getURL(`xslt/${xsltFileName}`);
+    const xsltUrl = typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function'
+        ? chrome.runtime.getURL(`xslt/${xsltFileName}`)
+        : `xslt/${xsltFileName}`;
     const response = await fetch(xsltUrl);
     
     if (!response.ok) {
@@ -45,39 +47,11 @@ async function loadXsltFile(fileType) {
     return await response.text();
 }
 
-/**
- * XML'i XSLT ile HTML'e dönüştürür
- */
-function xmlToHtml(xmlContent, xsltContent) {
+/** XML'i yerel XSLT polyfill'i ile HTML'e dönüştürür. */
+async function xmlToHtml(xmlContent, xsltContent) {
     try {
-        if (typeof XSLTProcessor === 'undefined') {
-            throw new Error('XSLTProcessor desteklenmiyor. Lütfen Chrome\'un güncel bir sürümünü kullanın.');
-        }
-        
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
-        const xsltDoc = parser.parseFromString(xsltContent, 'text/xml');
-        
-        // Hata kontrolü
-        const parserError = xmlDoc.querySelector('parsererror');
-        if (parserError) {
-            throw new Error('XML parse hatası: ' + parserError.textContent);
-        }
-        
-        const xsltError = xsltDoc.querySelector('parsererror');
-        if (xsltError) {
-            throw new Error('XSLT parse hatası: ' + xsltError.textContent);
-        }
-        
-        // XSLTProcessor kullanarak transform et
-        const processor = new XSLTProcessor();
-        processor.importStylesheet(xsltDoc);
-        const resultDoc = processor.transformToDocument(xmlDoc);
-        
-        // HTML string'e dönüştür
-        return new XMLSerializer().serializeToString(resultDoc);
+        return await window.transformXmlWithXslt(xmlContent, xsltContent);
     } catch (error) {
-        console.error('XML to HTML dönüştürme hatası:', error);
         throw error;
     }
 }
@@ -123,7 +97,7 @@ async function generatePreview() {
         const xsltContent = await loadXsltFile(detectedFileType);
         
         // XML'i HTML'e dönüştür
-        const htmlContent = xmlToHtml(xmlContent, xsltContent);
+        const htmlContent = await xmlToHtml(xmlContent, xsltContent);
         
         // Türkçe karakter desteği için Open Sans fontunu ekle
         const fullHtml = `
@@ -176,18 +150,8 @@ async function generatePreview() {
  */
 async function downloadPdf() {
     try {
-        const printWindow = window.open('', '_blank');
         const htmlContent = previewContent.innerHTML;
-        
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        
-        // Font'ların yüklenmesini bekle
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Print dialog'u aç
-        printWindow.focus();
-        printWindow.print();
+        await window.downloadHtmlAsPdf(htmlContent, fileName);
     } catch (error) {
         console.error('PDF indirme hatası:', error);
         alert('PDF indirme hatası: ' + error.message);

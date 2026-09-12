@@ -1,5 +1,32 @@
 let currentFile = null;
 let currentXmlContent = null;
+let archiveEntries = [];
+let archiveWarnings = [];
+let archiveTruncated = false;
+let selectedArchiveEntryId = null;
+let selectionRequestId = 0;
+let fileLoadRequestId = 0;
+let previewRequestId = 0;
+
+const MAX_XML_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024;
+const MAX_NESTED_ARCHIVE_SIZE = 50 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRIES = 500;
+const MAX_NESTED_ZIP_DEPTH = 3;
+const FILE_DATABASE_NAME = 'xml-berat-file-transfer';
+const FILE_DATABASE_VERSION = 1;
+const FILE_STORE_NAME = 'pending-files';
+
+const pageParams = new URLSearchParams(window.location.search);
+const pendingFileId = pageParams.get('fileId') || pageParams.get('archiveId');
+const isWorkspacePage = Boolean(pendingFileId) ||
+    pageParams.get('workspace') === '1' ||
+    document.body.classList.contains('workspace-page');
+
+if (isWorkspacePage) {
+    document.body.classList.add('workspace-page');
+    document.title = 'XML Berat PDF Dönüştürücü';
+}
 
 // DOM Elements
 const fileInput = document.getElementById('fileInput');
@@ -18,6 +45,14 @@ const htmlPreviewSection = document.getElementById('htmlPreviewSection');
 const htmlPreview = document.getElementById('htmlPreview');
 const htmlPreviewLoader = document.getElementById('htmlPreviewLoader');
 const closeHtmlPreviewBtn = document.getElementById('closeHtmlPreviewBtn');
+const previewEmptyState = document.getElementById('previewEmptyState');
+const archiveSection = document.getElementById('archiveSection');
+const archiveSummary = document.getElementById('archiveSummary');
+const archiveCount = document.getElementById('archiveCount');
+const archiveSearch = document.getElementById('archiveSearch');
+const archiveTypeFilter = document.getElementById('archiveTypeFilter');
+const archiveDateFilter = document.getElementById('archiveDateFilter');
+const archiveList = document.getElementById('archiveList');
 
 // XSLT dosya eşleştirmeleri
 const xsltMapping = {
@@ -82,14 +117,19 @@ convertBtn.addEventListener('click', handleConvert);
 // Close HTML Preview Button
 if (closeHtmlPreviewBtn) {
     closeHtmlPreviewBtn.addEventListener('click', () => {
-        if (htmlPreviewSection) {
-            htmlPreviewSection.style.display = 'none';
-        }
+        showPreviewEmptyState();
     });
 }
 
 // Remove File Button
 document.getElementById('removeFile').addEventListener('click', resetForm);
+document.getElementById('retryBtn').addEventListener('click', resetForm);
+
+archiveSearch.addEventListener('input', renderArchiveEntries);
+archiveTypeFilter.addEventListener('change', renderArchiveEntries);
+archiveDateFilter.addEventListener('change', renderArchiveEntries);
+
+initializeWorkspacePage();
 
 function handleFileSelect(e) {
     const file = e.target.files[0];
@@ -171,7 +211,9 @@ async function loadXsltFile(fileType) {
         throw new Error(`Geçersiz dosya türü: ${fileType}`);
     }
     
-    const xsltUrl = chrome.runtime.getURL(`xslt/${xsltFileName}`);
+    const xsltUrl = typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function'
+        ? chrome.runtime.getURL(`xslt/${xsltFileName}`)
+        : `xslt/${xsltFileName}`;
     const response = await fetch(xsltUrl);
     
     if (!response.ok) {
@@ -181,103 +223,598 @@ async function loadXsltFile(fileType) {
     return await response.text();
 }
 
-/**
- * XML'i XSLT ile HTML'e dönüştürür
- * Not: XSLTProcessor kullanımı Chrome tarafından uyarı veriyor ancak şu an için çalışıyor.
- * Gelecekte Chrome XSLT'yi kaldırırsa, alternatif bir çözüm gerekebilir.
- */
-function xmlToHtml(xmlContent, xsltContent) {
+/** XML'i yerel XSLT polyfill'i ile HTML'e dönüştürür. */
+async function xmlToHtml(xmlContent, xsltContent) {
     try {
-        // XSLTProcessor'un mevcut olup olmadığını kontrol et
-        if (typeof XSLTProcessor === 'undefined') {
-            throw new Error('XSLTProcessor desteklenmiyor. Lütfen Chrome\'un güncel bir sürümünü kullanın.');
-        }
-        
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
-        const xsltDoc = parser.parseFromString(xsltContent, 'text/xml');
-        
-        // XSLT hata kontrolü
-        const parserError = xmlDoc.querySelector('parsererror');
-        if (parserError) {
-            throw new Error('XML parse hatası: ' + parserError.textContent);
-        }
-        
-        const xsltError = xsltDoc.querySelector('parsererror');
-        if (xsltError) {
-            throw new Error('XSLT parse hatası: ' + xsltError.textContent);
-        }
-        
-        // XSLTProcessor kullanarak transform et
-        // Chrome'un XSLT uyarısını görmezden geliyoruz (şu an için çalışıyor)
-        const processor = new XSLTProcessor();
-        processor.importStylesheet(xsltDoc);
-        
-        const resultDoc = processor.transformToDocument(xmlDoc);
-        
-        // HTML string'e dönüştür
-        return new XMLSerializer().serializeToString(resultDoc);
+        return await window.transformXmlWithXslt(xmlContent, xsltContent);
     } catch (error) {
-        console.error('XML to HTML dönüştürme hatası:', error);
         throw error;
     }
 }
 
-async function handleFile(file) {
-    // Validate file type
-    if (!file.name.toLowerCase().endsWith('.xml')) {
-        showError('Lütfen bir XML dosyası seçin!');
+async function initializeWorkspacePage() {
+    if (!isWorkspacePage) {
         return;
     }
-    
-    // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-        showError('Dosya boyutu 10MB\'dan küçük olmalıdır!');
+
+    const headerDescription = document.querySelector('header p');
+    const uploadText = document.querySelector('.upload-text');
+    if (headerDescription) {
+        headerDescription.textContent = 'XML belgelerinizi geniş ekranda inceleyin';
+    }
+    if (uploadText) {
+        uploadText.textContent = 'Başka bir XML veya ZIP dosyası yükleyin';
+    }
+
+    if (!pendingFileId) {
         return;
     }
-    
-    currentFile = file;
-    displayFileInfo(file);
-    
-    // Dosyayı oku
+
+    fileInput.disabled = true;
+    const uploadTextElement = document.querySelector('.upload-text');
+    if (uploadTextElement) {
+        uploadTextElement.textContent = 'Popup\'tan seçilen dosya alınıyor…';
+    }
+
     try {
-        const reader = new FileReader();
-        currentXmlContent = await new Promise((resolve, reject) => {
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsText(file, 'UTF-8');
+        const file = await takePendingFile(pendingFileId);
+        if (!file) {
+            throw new Error('Aktarılan dosya bulunamadı. Lütfen dosyayı yeniden seçin.');
+        }
+        window.history.replaceState(null, '', `${window.location.pathname}?workspace=1`);
+        await handleFile(file);
+    } catch (error) {
+        window.history.replaceState(null, '', `${window.location.pathname}?workspace=1`);
+        showError(error.message || 'Dosya normal sayfada açılamadı.');
+    } finally {
+        fileInput.disabled = false;
+        if (uploadText) {
+            uploadText.textContent = 'Başka bir XML veya ZIP dosyası yükleyin';
+        }
+    }
+}
+
+function canOpenWorkspaceTab() {
+    return !isWorkspacePage &&
+        typeof chrome !== 'undefined' &&
+        chrome.runtime &&
+        typeof chrome.runtime.getURL === 'function' &&
+        chrome.tabs &&
+        typeof chrome.tabs.create === 'function' &&
+        typeof indexedDB !== 'undefined';
+}
+
+async function openFileInFullPage(file) {
+    const fileId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    fileInput.disabled = true;
+    selectFileBtn.disabled = true;
+    const uploadText = document.querySelector('.upload-text');
+    if (uploadText) {
+        uploadText.textContent = 'Dosya tam sayfada açılıyor…';
+    }
+
+    try {
+        await savePendingFile(fileId, file);
+        const targetUrl = chrome.runtime.getURL(`popup.html?fileId=${encodeURIComponent(fileId)}`);
+        await chrome.tabs.create({ url: targetUrl, active: true });
+        window.close();
+    } catch (error) {
+        console.error('Dosya sekmesi açılamadı:', error);
+        await deletePendingFile(fileId).catch(() => {});
+        fileInput.disabled = false;
+        selectFileBtn.disabled = false;
+        if (uploadText) {
+            uploadText.textContent = 'Dosyayı buraya sürükleyin veya tıklayın';
+        }
+        showError('Dosya normal sayfada açılamadı: ' + (error.message || 'Bilinmeyen hata'));
+    }
+}
+
+function openFileDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(FILE_DATABASE_NAME, FILE_DATABASE_VERSION);
+        request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains(FILE_STORE_NAME)) {
+                database.createObjectStore(FILE_STORE_NAME, { keyPath: 'id' });
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Geçici dosya alanı açılamadı.'));
+    });
+}
+
+async function savePendingFile(id, file) {
+    const database = await openFileDatabase();
+    try {
+        await runFileTransaction(database, 'readwrite', store => store.put({
+            id,
+            blob: file,
+            name: file.name,
+            type: file.type,
+            lastModified: file.lastModified,
+            createdAt: Date.now()
+        }));
+    } finally {
+        database.close();
+    }
+}
+
+async function takePendingFile(id) {
+    const database = await openFileDatabase();
+    try {
+        const record = await runFileTransaction(database, 'readonly', store => store.get(id));
+        if (!record) {
+            return null;
+        }
+        await runFileTransaction(database, 'readwrite', store => store.delete(id));
+        return new File([record.blob], record.name, {
+            type: record.type || 'application/octet-stream',
+            lastModified: record.lastModified || record.createdAt
         });
+    } finally {
+        database.close();
+    }
+}
+
+async function deletePendingFile(id) {
+    if (typeof indexedDB === 'undefined') {
+        return;
+    }
+    const database = await openFileDatabase();
+    try {
+        await runFileTransaction(database, 'readwrite', store => store.delete(id));
+    } finally {
+        database.close();
+    }
+}
+
+function runFileTransaction(database, mode, operation) {
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction(FILE_STORE_NAME, mode);
+        const request = operation(transaction.objectStore(FILE_STORE_NAME));
+        let result;
+        request.onsuccess = () => {
+            result = request.result;
+        };
+        request.onerror = () => reject(request.error || new Error('Geçici dosya işlemi başarısız oldu.'));
+        transaction.oncomplete = () => resolve(result);
+        transaction.onabort = () => reject(transaction.error || new Error('Geçici dosya işlemi iptal edildi.'));
+    });
+}
+
+async function handleFile(file) {
+    const loadRequestId = ++fileLoadRequestId;
+    selectionRequestId++;
+    const lowerName = file.name.toLowerCase();
+    const isXml = lowerName.endsWith('.xml');
+    const isZip = lowerName.endsWith('.zip');
+
+    if (!isXml && !isZip) {
+        showError('Lütfen bir XML veya ZIP dosyası seçin!');
+        return;
+    }
+
+    if (isZip && file.size > MAX_ARCHIVE_SIZE) {
+        showError('ZIP dosyası 50 MB\'dan küçük olmalıdır!');
+        return;
+    }
+
+    if (isXml && file.size > MAX_XML_FILE_SIZE) {
+        showError('XML dosyası 10 MB\'dan küçük olmalıdır!');
+        return;
+    }
+
+    if (canOpenWorkspaceTab()) {
+        hideError();
+        await openFileInFullPage(file);
+        return;
+    }
+
+    clearSelectedDocument();
+    hideError();
+    hideResult();
+    displayFileInfo(file);
+
+    if (isZip) {
+        await handleZipFile(file, loadRequestId);
+        return;
+    }
+
+    hideArchiveSection();
+
+    try {
+        const xmlContent = await readFileAsText(file);
+        if (loadRequestId !== fileLoadRequestId) {
+            return;
+        }
+        await prepareXmlDocument(file, xmlContent);
     } catch (error) {
         console.error('Dosya okuma hatası:', error);
         showError('Dosya okunurken bir hata oluştu: ' + error.message);
+    }
+}
+
+async function handleZipFile(file, loadRequestId) {
+    if (typeof JSZip === 'undefined') {
+        showError('ZIP desteği yüklenemedi. Eklentiyi yeniden yükleyip tekrar deneyin.');
         return;
     }
-    
-    // Dosya türünü otomatik tanı
-    let detectedType = detectFileType(file.name);
-    
-    // Eğer dosya adından tespit edilemediyse, içerikten tespit et
-    if (!detectedType && currentXmlContent) {
-        detectedType = detectFileTypeFromContent(currentXmlContent);
+
+    if (file.size > MAX_ARCHIVE_SIZE) {
+        showError('ZIP dosyası 50 MB\'dan küçük olmalıdır!');
+        return;
     }
-    
+
+    archiveEntries = [];
+    archiveWarnings = [];
+    archiveTruncated = false;
+    archiveSearch.value = '';
+    archiveTypeFilter.value = '';
+    archiveDateFilter.replaceChildren(new Option('Tüm tarihler', ''));
+    archiveSearch.disabled = true;
+    archiveSection.style.display = 'flex';
+    archiveSummary.textContent = 'Arşiv taranıyor…';
+    archiveCount.textContent = '';
+    showArchiveLoading();
+
+    try {
+        const zip = await JSZip.loadAsync(file);
+        if (loadRequestId !== fileLoadRequestId) {
+            return;
+        }
+
+        const scanState = { warnings: [], nextId: 1, truncated: false, loadRequestId };
+        await collectArchiveXmlEntries(zip, '', 0, scanState);
+        if (loadRequestId !== fileLoadRequestId) {
+            return;
+        }
+        archiveWarnings = scanState.warnings;
+        archiveTruncated = scanState.truncated;
+
+        archiveEntries.sort((a, b) => a.path.localeCompare(b.path, 'tr', {
+            numeric: true,
+            sensitivity: 'base'
+        }));
+
+        updateArchiveDateFilterOptions();
+        archiveSearch.disabled = false;
+        updateArchiveSummary();
+        renderArchiveEntries();
+
+        const firstAvailableEntry = archiveEntries.find(entry => !entry.error);
+        if (firstAvailableEntry) {
+            await selectArchiveEntry(firstAvailableEntry.id);
+        } else if (archiveEntries.length === 0) {
+            showError('ZIP içinde XML dosyası bulunamadı.');
+        } else {
+            showError('ZIP içindeki XML dosyaları boyut sınırını aşıyor.');
+        }
+    } catch (error) {
+        console.error('ZIP okuma hatası:', error);
+        archiveSummary.textContent = 'Arşiv okunamadı.';
+        archiveList.replaceChildren();
+        showError('ZIP dosyası okunamadı: ' + normalizeZipError(error));
+    }
+}
+
+async function collectArchiveXmlEntries(zip, parentPath, depth, scanState) {
+    const entries = Object.values(zip.files)
+        .filter(entry => !entry.dir)
+        .sort((a, b) => a.name.localeCompare(b.name, 'tr', { numeric: true, sensitivity: 'base' }));
+
+    for (const zipEntry of entries) {
+        if (scanState.loadRequestId !== fileLoadRequestId) {
+            return;
+        }
+        if (archiveEntries.length >= MAX_ARCHIVE_ENTRIES) {
+            scanState.truncated = true;
+            return;
+        }
+
+        const entryName = zipEntry.name;
+        const lowerName = entryName.toLowerCase();
+        const displayPath = parentPath ? `${parentPath} › ${entryName}` : entryName;
+        const uncompressedSize = getZipEntrySize(zipEntry);
+
+        if (lowerName.endsWith('.xml')) {
+            archiveEntries.push({
+                id: `archive-entry-${scanState.nextId++}`,
+                name: entryName.split('/').pop() || entryName,
+                path: displayPath,
+                size: uncompressedSize,
+                zipEntry,
+                detectedType: detectFileType(entryName),
+                dateKey: extractArchiveDate(entryName),
+                error: uncompressedSize !== null && uncompressedSize > MAX_XML_FILE_SIZE
+                    ? '10 MB sınırını aşıyor'
+                    : null
+            });
+            continue;
+        }
+
+        if (!lowerName.endsWith('.zip')) {
+            continue;
+        }
+
+        if (depth >= MAX_NESTED_ZIP_DEPTH) {
+            scanState.warnings.push(`${displayPath}: iç içe ZIP derinlik sınırı aşıldı.`);
+            continue;
+        }
+
+        if (uncompressedSize !== null && uncompressedSize > MAX_NESTED_ARCHIVE_SIZE) {
+            scanState.warnings.push(`${displayPath}: 50 MB sınırını aştığı için taranmadı.`);
+            continue;
+        }
+
+        try {
+            const nestedData = await zipEntry.async('uint8array');
+            const nestedZip = await JSZip.loadAsync(nestedData);
+            await collectArchiveXmlEntries(nestedZip, displayPath, depth + 1, scanState);
+            if (scanState.truncated) {
+                return;
+            }
+        } catch (error) {
+            scanState.warnings.push(`${displayPath}: alt ZIP okunamadı.`);
+            console.warn('Alt ZIP okunamadı:', displayPath, error);
+        }
+    }
+}
+
+async function selectArchiveEntry(entryId) {
+    const entry = archiveEntries.find(item => item.id === entryId);
+    if (!entry || entry.error) {
+        return;
+    }
+
+    const requestId = ++selectionRequestId;
+    selectedArchiveEntryId = entryId;
+    renderArchiveEntries();
+    clearSelectedDocument(false);
+    hideError();
+    hideResult();
+    archiveSummary.textContent = `${entry.path} açılıyor…`;
+
+    try {
+        const xmlContent = await entry.zipEntry.async('string');
+        if (requestId !== selectionRequestId) {
+            return;
+        }
+
+        const actualSize = new Blob([xmlContent]).size;
+        if (actualSize > MAX_XML_FILE_SIZE) {
+            entry.error = '10 MB sınırını aşıyor';
+            renderArchiveEntries();
+            throw new Error(`${entry.name} 10 MB sınırını aşıyor.`);
+        }
+
+        entry.size = actualSize;
+        const selectedFile = {
+            name: entry.name,
+            size: actualSize,
+            archivePath: entry.path
+        };
+        await prepareXmlDocument(selectedFile, xmlContent, entry);
+        updateArchiveSummary();
+        renderArchiveEntries();
+    } catch (error) {
+        if (requestId !== selectionRequestId) {
+            return;
+        }
+        console.error('Arşivdeki XML okunamadı:', error);
+        showError('XML dosyası açılamadı: ' + normalizeZipError(error));
+        updateArchiveSummary();
+    }
+}
+
+async function prepareXmlDocument(file, xmlContent, archiveEntry = null) {
+    currentFile = file;
+    currentXmlContent = xmlContent;
+
+    let detectedType = detectFileType(file.name);
+    if (!detectedType) {
+        detectedType = detectFileTypeFromContent(xmlContent);
+    }
+    if (archiveEntry) {
+        archiveEntry.detectedType = detectedType;
+    }
+
+    formSection.style.display = 'block';
+    hideError();
+    hideResult();
+
     if (detectedType) {
         fileTypeSelect.value = detectedType;
         convertBtn.disabled = false;
         showDetectionInfo(detectedType);
-        // HTML önizlemesini göster
-        if (currentXmlContent) {
-            await showHtmlPreview(currentXmlContent, detectedType);
-        }
+        await showHtmlPreview(xmlContent, detectedType);
     } else {
         fileTypeSelect.value = '';
         convertBtn.disabled = true;
         hideDetectionInfo();
+        hideHtmlPreview();
     }
-    
-    formSection.style.display = 'block';
-    hideError();
-    hideResult();
+}
+
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = event => resolve(event.target.result);
+        reader.onerror = () => reject(reader.error || new Error('Dosya okunamadı.'));
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+function getZipEntrySize(zipEntry) {
+    const size = zipEntry && zipEntry._data && zipEntry._data.uncompressedSize;
+    return Number.isFinite(size) ? size : null;
+}
+
+function extractArchiveDate(filePath) {
+    const match = String(filePath).match(/(?:^|[^0-9])((?:19|20)\d{2})(0[1-9]|1[0-2])(?:[^0-9]|$)/);
+    return match ? `${match[1]}-${match[2]}` : '';
+}
+
+function formatArchiveDateLabel(dateKey) {
+    const [year, month] = dateKey.split('-').map(Number);
+    return new Intl.DateTimeFormat('tr-TR', {
+        month: 'long',
+        year: 'numeric'
+    }).format(new Date(year, month - 1, 1));
+}
+
+function updateArchiveDateFilterOptions() {
+    const selectedDate = archiveDateFilter.value;
+    const dates = [...new Set(
+        archiveEntries.map(entry => entry.dateKey).filter(Boolean)
+    )].sort();
+
+    const fragment = document.createDocumentFragment();
+    const allDates = document.createElement('option');
+    allDates.value = '';
+    allDates.textContent = 'Tüm tarihler';
+    fragment.appendChild(allDates);
+
+    for (const dateKey of dates) {
+        const option = document.createElement('option');
+        option.value = dateKey;
+        option.textContent = formatArchiveDateLabel(dateKey);
+        fragment.appendChild(option);
+    }
+
+    archiveDateFilter.replaceChildren(fragment);
+    archiveDateFilter.value = dates.includes(selectedDate) ? selectedDate : '';
+}
+
+function normalizeZipError(error) {
+    const message = error && error.message ? error.message : 'Bilinmeyen hata';
+    if (/encrypted/i.test(message)) {
+        return 'Şifreli ZIP dosyaları desteklenmiyor.';
+    }
+    if (/central directory|corrupted|invalid/i.test(message)) {
+        return 'Dosya geçerli bir ZIP arşivi değil veya bozulmuş.';
+    }
+    return message;
+}
+
+function showArchiveLoading() {
+    const loading = document.createElement('div');
+    loading.className = 'archive-empty';
+    loading.textContent = 'XML dosyaları aranıyor…';
+    archiveList.replaceChildren(loading);
+}
+
+function updateArchiveSummary(warnings = archiveWarnings) {
+    const nestedCount = archiveEntries.filter(entry => entry.path.includes(' › ')).length;
+    const parts = [`${archiveEntries.length} XML bulundu`];
+    if (nestedCount) {
+        parts.push(`${nestedCount} tanesi alt ZIP içinde`);
+    }
+    if (warnings.length) {
+        parts.push(`${warnings.length} alt ZIP taranamadı`);
+    }
+    if (archiveTruncated) {
+        parts.push(`liste ${MAX_ARCHIVE_ENTRIES} XML ile sınırlandı`);
+    }
+    archiveSummary.textContent = parts.join(' • ');
+}
+
+function renderArchiveEntries() {
+    const query = archiveSearch.value.trim().toLocaleLowerCase('tr-TR');
+    const selectedType = archiveTypeFilter.value;
+    const selectedDate = archiveDateFilter.value;
+    const filteredEntries = archiveEntries.filter(entry => {
+        const matchesQuery = entry.path.toLocaleLowerCase('tr-TR').includes(query);
+        const matchesType = !selectedType || entry.detectedType === selectedType;
+        const matchesDate = !selectedDate || entry.dateKey === selectedDate;
+        return matchesQuery && matchesType && matchesDate;
+    });
+
+    const hasFilters = Boolean(query || selectedType || selectedDate);
+    archiveCount.textContent = hasFilters
+        ? `${filteredEntries.length}/${archiveEntries.length}`
+        : `${archiveEntries.length} XML`;
+
+    if (filteredEntries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'archive-empty';
+        empty.textContent = archiveEntries.length === 0
+            ? 'Bu arşivde XML dosyası yok.'
+            : 'Filtrelerle eşleşen XML bulunamadı.';
+        archiveList.replaceChildren(empty);
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const entry of filteredEntries) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'archive-item';
+        item.setAttribute('role', 'listitem');
+        item.disabled = Boolean(entry.error);
+        if (entry.id === selectedArchiveEntryId) {
+            item.classList.add('selected');
+        }
+
+        const main = document.createElement('span');
+        main.className = 'archive-item-main';
+
+        const itemName = document.createElement('span');
+        itemName.className = 'archive-item-name';
+        itemName.textContent = entry.name;
+
+        const itemPath = document.createElement('span');
+        itemPath.className = 'archive-item-path';
+        itemPath.textContent = entry.path;
+
+        main.append(itemName, itemPath);
+
+        const meta = document.createElement('span');
+        meta.className = 'archive-item-meta';
+
+        const typeBadge = document.createElement('span');
+        typeBadge.className = 'archive-type-badge';
+        typeBadge.textContent = entry.error ? 'Atlandı' : (entry.detectedType || 'XML');
+
+        const size = document.createElement('span');
+        size.className = 'archive-item-size';
+        size.textContent = entry.error || (entry.size === null ? 'Boyut bilinmiyor' : formatFileSize(entry.size));
+
+        meta.append(typeBadge, size);
+        item.append(main, meta);
+        item.addEventListener('click', () => selectArchiveEntry(entry.id));
+        fragment.appendChild(item);
+    }
+
+    archiveList.replaceChildren(fragment);
+}
+
+function hideArchiveSection() {
+    archiveEntries = [];
+    archiveWarnings = [];
+    archiveTruncated = false;
+    selectedArchiveEntryId = null;
+    archiveSearch.value = '';
+    archiveTypeFilter.value = '';
+    archiveDateFilter.replaceChildren(new Option('Tüm tarihler', ''));
+    archiveSection.style.display = 'none';
+    archiveList.replaceChildren();
+}
+
+function clearSelectedDocument(clearSelection = true) {
+    currentFile = null;
+    currentXmlContent = null;
+    if (clearSelection) {
+        selectedArchiveEntryId = null;
+    }
+    fileTypeSelect.value = '';
+    convertBtn.disabled = true;
+    formSection.style.display = 'none';
+    hideDetectionInfo();
+    hideHtmlPreview();
 }
 
 /**
@@ -302,9 +839,14 @@ function showDetectionInfo(fileType) {
     
     detectionInfo.innerHTML = `
         <div class="detection-badge">
-            <span class="detection-icon">🔍</span>
-            <span>Otomatik tespit: <strong>${typeNames[fileType]}</strong></span>
-            <span class="detection-hint">(İsterseniz değiştirebilirsiniz)</span>
+            <span class="detection-icon" aria-hidden="true">
+                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </span>
+            <span>Otomatik tespit:</span>
+            <strong>${typeNames[fileType]}</strong>
         </div>
     `;
     detectionInfo.style.display = 'block';
@@ -324,6 +866,7 @@ function displayFileInfo(file) {
     fileName.textContent = file.name;
     fileSize.textContent = formatFileSize(file.size);
     fileInfo.style.display = 'block';
+    document.body.classList.add('has-file');
 }
 
 function formatFileSize(bytes) {
@@ -355,13 +898,13 @@ async function handleConvert() {
         const xsltContent = await loadXsltFile(fileTypeSelect.value);
         
         // XML'i HTML'e dönüştür
-        const htmlContent = xmlToHtml(currentXmlContent, xsltContent);
+        const htmlContent = await xmlToHtml(currentXmlContent, xsltContent);
         
         // PDF oluştur ve indir
         await generateAndDownloadPdf(htmlContent, currentFile.name);
         
         // Başarı mesajı göster
-        const pdfName = currentFile.name.replace('.xml', '.pdf');
+        const pdfName = currentFile.name.replace(/\.xml$/i, '.pdf');
         showResult(`PDF başarıyla indirildi: ${pdfName}`);
         
         // Buton loader'ını gizle ve butonu tekrar aktif et
@@ -383,57 +926,9 @@ async function handleConvert() {
     }
 }
 
-/**
- * HTML içeriğini PDF'e dönüştürür ve indirir
- */
+/** HTML içeriğini yeni pencere açmadan PDF olarak indirir. */
 async function generateAndDownloadPdf(htmlContent, originalFileName) {
-    // Yeni bir pencerede HTML'i aç
-    const printWindow = window.open('', '_blank');
-    
-    // Türkçe karakter desteği için Open Sans fontunu ekle
-    const fullHtml = `
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            font-family: 'Open Sans', 'DejaVu Sans', 'Arial', 'Arial Narrow', sans-serif !important;
-        }
-        @media print {
-            @page {
-                margin: 10mm 5mm;
-                size: A4;
-            }
-            body {
-                margin: 0;
-                padding: 0;
-            }
-        }
-    </style>
-</head>
-<body>
-    ${htmlContent}
-</body>
-</html>`;
-    
-    printWindow.document.write(fullHtml);
-    printWindow.document.close();
-    
-    // Font'ların yüklenmesini bekle
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // PDF adını belirle
-    const pdfName = originalFileName.replace('.xml', '.pdf');
-    
-    // Print dialog'u aç (kullanıcı PDF olarak kaydedebilir)
-    printWindow.focus();
-    printWindow.print();
-    
-    // Alternatif: jsPDF kullanarak otomatik indirme (isteğe bağlı)
-    // Şimdilik print dialog kullanıyoruz, kullanıcı "Save as PDF" seçebilir
+    await window.downloadHtmlAsPdf(htmlContent, originalFileName);
 }
 
 function showResult(message) {
@@ -459,8 +954,11 @@ function hideError() {
 }
 
 function resetForm() {
+    fileLoadRequestId++;
+    selectionRequestId++;
     currentFile = null;
     currentXmlContent = null;
+    document.body.classList.remove('has-file');
     fileInput.value = '';
     fileTypeSelect.value = '';
     convertBtn.disabled = true;
@@ -478,6 +976,7 @@ function resetForm() {
         URL.revokeObjectURL(htmlPreview.src);
         htmlPreview.src = '';
     }
+    hideArchiveSection();
     hideDetectionInfo();
 }
 
@@ -489,8 +988,14 @@ async function showHtmlPreview(xmlContent, fileType) {
         return;
     }
     
+    const requestId = ++previewRequestId;
+
+    if (previewEmptyState) {
+        previewEmptyState.style.display = 'none';
+    }
+
     // Önizleme section'ını göster ve loader'ı aktif et
-    htmlPreviewSection.style.display = 'block';
+    htmlPreviewSection.style.display = 'flex';
     if (htmlPreviewLoader) {
         htmlPreviewLoader.style.display = 'flex';
     }
@@ -502,9 +1007,12 @@ async function showHtmlPreview(xmlContent, fileType) {
     try {
         // XSLT dosyasını yükle
         const xsltContent = await loadXsltFile(fileType);
+        if (requestId !== previewRequestId) {
+            return;
+        }
         
         // XML'i HTML'e dönüştür
-        const htmlContent = xmlToHtml(xmlContent, xsltContent);
+        const htmlContent = await xmlToHtml(xmlContent, xsltContent);
         
         // HTML içeriğini blob olarak oluştur ve iframe'de göster
         const fullHtml = `
@@ -561,8 +1069,26 @@ async function showHtmlPreview(xmlContent, fileType) {
  * HTML önizlemesini gizler
  */
 function hideHtmlPreview() {
+    previewRequestId++;
     if (htmlPreviewSection) {
         htmlPreviewSection.style.display = 'none';
+    }
+    if (previewEmptyState) {
+        previewEmptyState.style.display = 'none';
+    }
+    if (htmlPreview && htmlPreview.src && htmlPreview.src.startsWith('blob:')) {
+        URL.revokeObjectURL(htmlPreview.src);
+        htmlPreview.src = '';
+    }
+}
+
+function showPreviewEmptyState() {
+    previewRequestId++;
+    if (htmlPreviewSection) {
+        htmlPreviewSection.style.display = 'none';
+    }
+    if (previewEmptyState && document.body.classList.contains('has-file')) {
+        previewEmptyState.style.display = 'flex';
     }
     if (htmlPreview && htmlPreview.src && htmlPreview.src.startsWith('blob:')) {
         URL.revokeObjectURL(htmlPreview.src);
