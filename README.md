@@ -65,6 +65,13 @@ npm run build
 
 Kurulum dosyası `desktop/src-tauri/target/release/bundle/nsis/` altında oluşur. Windows uygulamasını macOS veya Linux üzerinde paketlemek desteklenmez; paketleme Windows'ta veya GitHub Actions ile yapılır.
 
+GitHub Release için sürüm etiketini push edin. `Windows desktop` işi kurulumu derler ve `v1.0.0` gibi etiketlerde Release sayfasına ekler:
+
+```
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ## Kullanım
 
 ### Yöntem 1: Otomatik Görüntüleme (Önerilen)
