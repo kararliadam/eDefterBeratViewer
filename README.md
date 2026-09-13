@@ -50,7 +50,7 @@ Eklentinin simge dosyalarını eklemek için:
 
 Windows 10 veya 11 ve WebView2 gerekir (güncel Windows sürümlerinde genelde yüklüdür).
 
-1. GitHub Actions `Windows desktop` işinin ürettiği NSIS kurulumunu indirin veya `desktop/` klasöründe `npm install` ve `npm run build` çalıştırın
+1. GitHub Actions `Windows desktop` işinin ürettiği NSIS kurulumunu indirin veya proje kökünde `npm run build` çalıştırın
 2. `eDefter Berat Goruntuleyici_1.0.0_x64-setup.exe` dosyasını çalıştırın
 3. Kurulumdan sonra bir `.xml` veya `.zip` dosyasına sağ tıklayıp **Berat Görüntüleyici ile aç** seçin
 4. Windows 11 kısa menüsünde seçenek görünmezse **Daha fazla seçenek göster** ile klasik menüyü açın
@@ -60,8 +60,6 @@ Kurulum varsayılan XML veya ZIP açıcısını değiştirmez. Uygulama kaldır�
 Windows kurulumunu bu makinede üretmek için:
 
 ```
-cd desktop
-npm install
 npm run build
 ```
 
@@ -161,7 +159,7 @@ Eklentiyi geliştirmek için:
 2. `chrome://extensions/` sayfasında eklentinin yanındaki Yenile düğmesine tıklayın
 3. Değişiklikler otomatik olarak yüklenecektir
 
-Windows uygulamasını geliştirmek için `desktop/` klasöründe `npm install` ve `npm run dev` kullanın. Görüntüleyici arayüzü eklenti ile ortaktır (`popup.html`). Windows installer `Windows desktop` GitHub Actions işi ile de üretilebilir.
+Windows uygulamasını geliştirmek için proje kökünde `npm run dev` kullanın. Görüntüleyici arayüzü eklenti ile ortaktır (`popup.html`). Windows installer `Windows desktop` GitHub Actions işi ile de üretilebilir.
 
 ## Notlar
 
