@@ -133,6 +133,7 @@ archiveTypeFilter.addEventListener('change', renderArchiveEntries);
 archiveDateFilter.addEventListener('change', renderArchiveEntries);
 
 initializeWorkspacePage();
+window.openDesktopFile = handleFile;
 
 function handleFileSelect(e) {
     const file = e.target.files[0];

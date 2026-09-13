@@ -1,0 +1,26 @@
+[package]
+name = "berat-goruntuleyici"
+version = "1.0.0"
+description = "eDefter Berat Görüntüleyici"
+authors = ["eDefter Berat Görüntüleyici"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "berat_goruntuleyici_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_bytes = "0.11"
+serde_json = "1"
+tauri = { version = "2", features = [] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"

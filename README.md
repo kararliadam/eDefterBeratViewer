@@ -1,6 +1,6 @@
 # eDefter Berat Görüntüleyici
 
-Bu Chrome eklentisi, e-Defter berat XML dosyalarını ve ZIP arşivlerini geniş ekranda görüntülemenizi, önizlemenizi ve PDF olarak indirmenizi sağlar.
+Bu proje e-Defter berat XML dosyalarını ve ZIP arşivlerini geniş ekranda görüntülemenizi, önizlemenizi ve PDF olarak indirmenizi sağlar. Chrome eklentisi olarak veya Windows masaüstü uygulaması olarak kullanılabilir.
 
 ## Ekran Görüntüleri
 
@@ -46,6 +46,27 @@ Eklentinin simge dosyalarını eklemek için:
 
 2. Simge dosyaları yoksa Chrome varsayılan bir simge gösterir; eklenti yine çalışır.
 
+### 3. Windows Uygulaması
+
+Windows 10 veya 11 ve WebView2 gerekir (güncel Windows sürümlerinde genelde yüklüdür).
+
+1. GitHub Actions `Windows desktop` işinin ürettiği NSIS kurulumunu indirin veya `desktop/` klasöründe `npm install` ve `npm run build` çalıştırın
+2. `eDefter Berat Goruntuleyici_1.0.0_x64-setup.exe` dosyasını çalıştırın
+3. Kurulumdan sonra bir `.xml` veya `.zip` dosyasına sağ tıklayıp **Berat Görüntüleyici ile aç** seçin
+4. Windows 11 kısa menüsünde seçenek görünmezse **Daha fazla seçenek göster** ile klasik menüyü açın
+
+Kurulum varsayılan XML veya ZIP açıcısını değiştirmez. Uygulama kaldırıldığında Explorer menü kaydı da silinir.
+
+Windows kurulumunu bu makinede üretmek için:
+
+```
+cd desktop
+npm install
+npm run build
+```
+
+Kurulum dosyası `desktop/src-tauri/target/release/bundle/nsis/` altında oluşur. Windows uygulamasını macOS veya Linux üzerinde paketlemek desteklenmez; paketleme Windows'ta veya GitHub Actions ile yapılır.
+
 ## Kullanım
 
 ### Yöntem 1: Otomatik Görüntüleme (Önerilen)
@@ -77,6 +98,13 @@ Eklentinin simge dosyalarını eklemek için:
 
 Güvenli ve akıcı kullanım için ZIP boyutu 50 MB, her XML dosyası 10 MB ve arşiv başına liste 500 XML ile sınırlıdır. Şifreli ZIP dosyaları desteklenmez.
 
+### Yöntem 4: Windows Explorer ile Kullanım
+
+1. Windows uygulamasını kurun
+2. Bir XML veya ZIP dosyasına sağ tıklayıp **Berat Görüntüleyici ile aç** seçin
+3. Uygulama zaten açıksa yeni dosya mevcut pencerede yüklenir
+4. İsterseniz uygulamayı başlatıp dosyayı sürükleyip bırakabilirsiniz
+
 ## Desteklenen Dosya Türleri
 
 | Dosya Türü | XSLT Dosyası | Açıklama |
@@ -90,9 +118,10 @@ Güvenli ve akıcı kullanım için ZIP boyutu 50 MB, her XML dosyası 10 MB ve 
 ## Teknik Detaylar
 
 - **Manifest Version**: 3
+- **Windows uygulaması**: Tauri 2, sistem WebView2
 - **XSLT İşleme**: Tarayıcı içinde, yerel WASM XSLT polyfill ile
 - **PDF Oluşturma**: Yerel html2canvas + jsPDF ile doğrudan A4 PDF üretimi
-- **Dosya Okuma**: FileReader API
+- **Dosya Okuma**: FileReader API (eklenti) veya seçilen dosya yolu (Windows)
 - **ZIP Okuma**: JSZip 3.10.1 (eklenti içinde yerel olarak paketlenmiştir)
 - **Türkçe Karakter Desteği**: Open Sans fontu (Google Fonts)
 
@@ -132,10 +161,12 @@ Eklentiyi geliştirmek için:
 2. `chrome://extensions/` sayfasında eklentinin yanındaki Yenile düğmesine tıklayın
 3. Değişiklikler otomatik olarak yüklenecektir
 
+Windows uygulamasını geliştirmek için `desktop/` klasöründe `npm install` ve `npm run dev` kullanın. Görüntüleyici arayüzü eklenti ile ortaktır (`popup.html`). Windows installer `Windows desktop` GitHub Actions işi ile de üretilebilir.
+
 ## Notlar
 
-- Eklenti tamamen tarayıcı içinde çalışır, sunucuya veri göndermez
-- Tüm işlemler tarayıcıda gerçekleşir
+- Eklenti ve Windows uygulaması tamamen yerel çalışır, sunucuya veri göndermez
+- Tüm işlemler cihazınızda gerçekleşir
 - Dosyalar sadece yerel olarak işlenir, hiçbir veri dışarı gönderilmez
 - PDF, tarayıcı yazdırma penceresi açılmadan yerel olarak oluşturulup indirilir. Kanvas ve PDF boyutu doğrulanır; boş çıktı oluşursa indirme başarısız olarak bildirilir.
 
