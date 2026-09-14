@@ -1,7 +1,7 @@
 {
   "name": "berat-goruntuleyici-desktop",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.9",
   "description": "Windows desktop wrapper for eDefter Berat Görüntüleyici",
   "scripts": {
     "prepare-frontend": "node prepare-frontend.mjs",

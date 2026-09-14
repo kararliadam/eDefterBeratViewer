@@ -7,11 +7,32 @@
     document.body.classList.add('workspace-page');
     document.title = 'eDefter Berat Görüntüleyici';
 
+    function toUint8Array(data) {
+        if (data instanceof Uint8Array) {
+            return data;
+        }
+        if (data instanceof ArrayBuffer) {
+            return new Uint8Array(data);
+        }
+        if (ArrayBuffer.isView(data)) {
+            return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        }
+
+        const length = Array.isArray(data) ? data.length : Number(data && data.length) || 0;
+        const bytes = new Uint8Array(length);
+        const chunkSize = 0x8000;
+        for (let offset = 0; offset < length; offset += chunkSize) {
+            const end = Math.min(offset + chunkSize, length);
+            for (let index = offset; index < end; index += 1) {
+                bytes[index] = data[index];
+            }
+        }
+        return bytes;
+    }
+
     async function fileFromPath(path) {
         const result = await tauri.core.invoke('read_launch_file', { path });
-        const bytes = result.data instanceof Uint8Array
-            ? result.data
-            : new Uint8Array(result.data);
+        const bytes = toUint8Array(result.data);
         const type = result.name.toLowerCase().endsWith('.zip')
             ? 'application/zip'
             : 'application/xml';

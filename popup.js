@@ -52,6 +52,7 @@ const archiveSummary = document.getElementById('archiveSummary');
 const archiveCount = document.getElementById('archiveCount');
 const archiveSearch = document.getElementById('archiveSearch');
 const archiveTypeFilter = document.getElementById('archiveTypeFilter');
+const archiveOrgFilter = document.getElementById('archiveOrgFilter');
 const archiveDateFilter = document.getElementById('archiveDateFilter');
 const archiveList = document.getElementById('archiveList');
 
@@ -130,6 +131,7 @@ document.getElementById('retryBtn').addEventListener('click', resetForm);
 
 archiveSearch.addEventListener('input', renderArchiveEntries);
 archiveTypeFilter.addEventListener('change', renderArchiveEntries);
+archiveOrgFilter.addEventListener('change', renderArchiveEntries);
 archiveDateFilter.addEventListener('change', renderArchiveEntries);
 
 initializeWorkspacePage();
@@ -458,6 +460,7 @@ async function handleZipFile(file, loadRequestId) {
     archiveTruncated = false;
     archiveSearch.value = '';
     archiveTypeFilter.value = '';
+    archiveOrgFilter.replaceChildren(new Option('Tüm kurumlar', ''));
     archiveDateFilter.replaceChildren(new Option('Tüm tarihler', ''));
     archiveSearch.disabled = true;
     archiveSection.style.display = 'flex';
@@ -484,6 +487,7 @@ async function handleZipFile(file, loadRequestId) {
             sensitivity: 'base'
         }));
 
+        updateArchiveOrgFilterOptions();
         updateArchiveDateFilterOptions();
         archiveSearch.disabled = false;
         updateArchiveSummary();
@@ -524,6 +528,7 @@ async function collectArchiveXmlEntries(zip, parentPath, depth, scanState) {
         const displayPath = parentPath ? `${parentPath} › ${entryName}` : entryName;
         const uncompressedSize = getZipEntrySize(zipEntry);
 
+        const organization = extractArchiveOrganization(displayPath);
         if (lowerName.endsWith('.xml')) {
             archiveEntries.push({
                 id: `archive-entry-${scanState.nextId++}`,
@@ -533,6 +538,8 @@ async function collectArchiveXmlEntries(zip, parentPath, depth, scanState) {
                 zipEntry,
                 detectedType: detectFileType(entryName),
                 dateKey: extractArchiveDate(entryName),
+                organizationKey: organization.key,
+                organizationName: organization.name,
                 error: uncompressedSize !== null && uncompressedSize > MAX_XML_FILE_SIZE
                     ? '10 MB sınırını aşıyor'
                     : null
@@ -601,6 +608,13 @@ async function selectArchiveEntry(entryId) {
             size: actualSize,
             archivePath: entry.path
         };
+        const organizationName = extractOrganizationNameFromContent(xmlContent);
+        if (organizationName) {
+            if (!entry.organizationKey) {
+                entry.organizationKey = organizationName;
+            }
+            applyOrganizationName(entry.organizationKey, organizationName);
+        }
         await prepareXmlDocument(selectedFile, xmlContent, entry);
         updateArchiveSummary();
         renderArchiveEntries();
@@ -662,6 +676,121 @@ function getZipEntrySize(zipEntry) {
 function extractArchiveDate(filePath) {
     const match = String(filePath).match(/(?:^|[^0-9])((?:19|20)\d{2})(0[1-9]|1[0-2])(?:[^0-9]|$)/);
     return match ? `${match[1]}-${match[2]}` : '';
+}
+
+function extractArchiveOrganization(filePath) {
+    const path = String(filePath).replace(/\\/g, '/');
+    const parts = path.split(/\s*›\s*|\//).map(part => part.trim()).filter(Boolean);
+    const fileName = (parts[parts.length - 1] || '').split('/').pop() || '';
+    let key = '';
+    let name = '';
+
+    const taxMatch = fileName.replace(/^GIB-/i, '').match(/^(\d{10,11})(?:[-_.]|$)/);
+    if (taxMatch) {
+        key = taxMatch[1];
+    }
+
+    for (const part of parts) {
+        const zipMatch = part.match(/^(\d+)_(.+)_((?:19|20)\d{2})_(0[1-9]|1[0-2])\.zip$/i);
+        if (!zipMatch) {
+            continue;
+        }
+        name = zipMatch[2].replace(/_/g, ' ').trim();
+        if (!key) {
+            key = zipMatch[1];
+        }
+        break;
+    }
+
+    if (!key && !name && parts.length > 1) {
+        const folder = parts[0].replace(/\.zip$/i, '');
+        if (folder && !/^\d{4}[-_.]?(0[1-9]|1[0-2])/.test(folder)) {
+            return { key: folder, name: folder };
+        }
+    }
+
+    return { key: key || name, name };
+}
+
+function extractOrganizationNameFromContent(xmlContent) {
+    const sample = String(xmlContent).substring(0, 25000);
+    const unvanMatch = sample.match(/Kurum Unvanı[\s\S]{0,500}?<(?:[\w.-]+:)?organizationIdentifier[^>]*>\s*([^<]+)/i);
+    if (unvanMatch) {
+        return unvanMatch[1].trim();
+    }
+    const nameMatch = sample.match(/Adı Soyadı[\s\S]{0,500}?<(?:[\w.-]+:)?organizationIdentifier[^>]*>\s*([^<]+)/i);
+    return nameMatch ? nameMatch[1].trim() : '';
+}
+
+function formatOrganizationLabel(key, name) {
+    if (key && name && name !== key) {
+        return `${name} (${key})`;
+    }
+    return name || key || 'Diğer';
+}
+
+function applyOrganizationName(key, name) {
+    if (!key || !name) {
+        return;
+    }
+
+    let changed = false;
+    for (const entry of archiveEntries) {
+        if (entry.organizationKey !== key || entry.organizationName === name) {
+            continue;
+        }
+        entry.organizationName = name;
+        changed = true;
+    }
+
+    if (changed) {
+        updateArchiveOrgFilterOptions();
+    }
+}
+
+function updateArchiveOrgFilterOptions() {
+    const selectedOrg = archiveOrgFilter.value;
+    const byKey = new Map();
+
+    for (const entry of archiveEntries) {
+        const key = entry.organizationKey || '__none__';
+        const current = byKey.get(key);
+        if (!current) {
+            byKey.set(key, {
+                key,
+                name: entry.organizationName || ''
+            });
+            continue;
+        }
+        if (!current.name && entry.organizationName) {
+            current.name = entry.organizationName;
+        }
+    }
+
+    const organizations = [...byKey.values()].sort((a, b) => {
+        return formatOrganizationLabel(a.key === '__none__' ? '' : a.key, a.name)
+            .localeCompare(formatOrganizationLabel(b.key === '__none__' ? '' : b.key, b.name), 'tr', { sensitivity: 'base' });
+    });
+
+    const fragment = document.createDocumentFragment();
+    const allOrgs = document.createElement('option');
+    allOrgs.value = '';
+    allOrgs.textContent = 'Tüm kurumlar';
+    fragment.appendChild(allOrgs);
+
+    for (const organization of organizations) {
+        const option = document.createElement('option');
+        option.value = organization.key;
+        option.textContent = formatOrganizationLabel(
+            organization.key === '__none__' ? '' : organization.key,
+            organization.name
+        );
+        fragment.appendChild(option);
+    }
+
+    archiveOrgFilter.replaceChildren(fragment);
+    const availableKeys = organizations.map(organization => organization.key);
+    archiveOrgFilter.value = availableKeys.includes(selectedOrg) ? selectedOrg : '';
 }
 
 function formatArchiveDateLabel(dateKey) {
@@ -731,15 +860,18 @@ function updateArchiveSummary(warnings = archiveWarnings) {
 function renderArchiveEntries() {
     const query = archiveSearch.value.trim().toLocaleLowerCase('tr-TR');
     const selectedType = archiveTypeFilter.value;
+    const selectedOrg = archiveOrgFilter.value;
     const selectedDate = archiveDateFilter.value;
     const filteredEntries = archiveEntries.filter(entry => {
         const matchesQuery = entry.path.toLocaleLowerCase('tr-TR').includes(query);
         const matchesType = !selectedType || entry.detectedType === selectedType;
+        const matchesOrg = !selectedOrg ||
+            (selectedOrg === '__none__' ? !entry.organizationKey : entry.organizationKey === selectedOrg);
         const matchesDate = !selectedDate || entry.dateKey === selectedDate;
-        return matchesQuery && matchesType && matchesDate;
+        return matchesQuery && matchesType && matchesOrg && matchesDate;
     });
 
-    const hasFilters = Boolean(query || selectedType || selectedDate);
+    const hasFilters = Boolean(query || selectedType || selectedOrg || selectedDate);
     archiveCount.textContent = hasFilters
         ? `${filteredEntries.length}/${archiveEntries.length}`
         : `${archiveEntries.length} XML`;
@@ -805,6 +937,7 @@ function hideArchiveSection() {
     selectedArchiveEntryId = null;
     archiveSearch.value = '';
     archiveTypeFilter.value = '';
+    archiveOrgFilter.replaceChildren(new Option('Tüm kurumlar', ''));
     archiveDateFilter.replaceChildren(new Option('Tüm tarihler', ''));
     archiveSection.style.display = 'none';
     archiveList.replaceChildren();
@@ -900,19 +1033,16 @@ async function handleConvert() {
         
         hideError();
         hideResult();
-        
-        // XSLT dosyasını yükle
-        const xsltContent = await loadXsltFile(fileTypeSelect.value);
-        
-        // XML'i HTML'e dönüştür
-        const htmlContent = await xmlToHtml(currentXmlContent, xsltContent);
-        
-        // PDF oluştur ve indir
+
+        const previewDoc = htmlPreview && htmlPreview.contentDocument;
+        const htmlContent = previewDoc && previewDoc.body && previewDoc.body.innerHTML.trim()
+            ? null
+            : await xmlToHtml(currentXmlContent, await loadXsltFile(fileTypeSelect.value));
+
         await generateAndDownloadPdf(htmlContent, currentFile.name);
-        
-        // Başarı mesajı göster
+
         const pdfName = currentFile.name.replace(/\.xml$/i, '.pdf');
-        showResult(`PDF başarıyla indirildi: ${pdfName}`);
+        showResult(`PDF kaydedildi: ${pdfName}`);
         
         // Buton loader'ını gizle ve butonu tekrar aktif et
         if (btnText) btnText.style.display = 'inline';

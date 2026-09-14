@@ -1,0 +1,18 @@
+---
+description: Bump patch version on every bug fix
+alwaysApply: true
+---
+
+# Version bump on every fix
+
+After each bug fix, increment the patch version (for example `1.0.0` -> `1.0.1`). Keep these files in sync:
+
+- `manifest.json`
+- `desktop/package.json`
+- `desktop/package-lock.json` (root package version only)
+- `desktop/src-tauri/tauri.conf.json`
+- `desktop/src-tauri/Cargo.toml`
+- `desktop/src-tauri/Cargo.lock` (only the `berat-goruntuleyici` package)
+- `README.md` installer filename and tag examples
+
+Do not bump for docs-only, formatting, or rule changes unless the user asks. Do not skip a bump because the previous fix in the same conversation already incremented; one increment per shipped fix is enough.

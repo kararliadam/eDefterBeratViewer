@@ -1,6 +1,6 @@
 [package]
 name = "berat-goruntuleyici"
-version = "1.0.0"
+version = "1.0.9"
 description = "eDefter Berat Görüntüleyici"
 authors = ["eDefter Berat Görüntüleyici"]
 edition = "2021"

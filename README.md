@@ -51,7 +51,7 @@ Eklentinin simge dosyalarını eklemek için:
 Windows 10 veya 11 ve WebView2 gerekir (güncel Windows sürümlerinde genelde yüklüdür).
 
 1. GitHub Actions `Windows desktop` işinin ürettiği NSIS kurulumunu indirin veya proje kökünde `npm run build` çalıştırın
-2. `eDefter Berat Goruntuleyici_1.0.0_x64-setup.exe` dosyasını çalıştırın
+2. `eDefter Berat Goruntuleyici_1.0.9_x64-setup.exe` dosyasını çalıştırın
 3. Kurulumdan sonra bir `.xml` veya `.zip` dosyasına sağ tıklayıp **Berat Görüntüleyici ile aç** seçin
 4. Windows 11 kısa menüsünde seçenek görünmezse **Daha fazla seçenek göster** ile klasik menüyü açın
 
@@ -65,11 +65,11 @@ npm run build
 
 Kurulum dosyası `desktop/src-tauri/target/release/bundle/nsis/` altında oluşur. Windows uygulamasını macOS veya Linux üzerinde paketlemek desteklenmez; paketleme Windows'ta veya GitHub Actions ile yapılır.
 
-GitHub Release için sürüm etiketini push edin. `Windows desktop` işi kurulumu derler ve `v1.0.0` gibi etiketlerde Release sayfasına ekler:
+GitHub Release için sürüm etiketini push edin. `Windows desktop` işi kurulumu derler ve `v1.0.9` gibi etiketlerde Release sayfasına ekler:
 
 ```
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.9
+git push origin v1.0.9
 ```
 
 ## Kullanım
@@ -97,7 +97,7 @@ git push origin v1.0.0
 2. ZIP dosyanızı sürükleyip bırakın veya "XML / ZIP Seç" butonunu kullanın
 3. ZIP, popup'tan normal boyutlu yeni bir tarayıcı sekmesine aktarılır; dosyayı yeniden seçmeniz gerekmez
 4. ZIP'in klasörlerindeki ve en fazla 3 seviye iç içe ZIP'lerdeki XML dosyaları listelenir
-5. Belge türü (DR, K, KB, Y, YB) ve dönem tarihi filtreleriyle listeyi daraltın
+5. Belge türü (DR, K, KB, Y, YB), kurum ve dönem tarihi filtreleriyle listeyi daraltın
 6. Listeden bir XML'e tıklayarak türünü ve önizlemesini görüntüleyin
 7. Seçili XML'i önizleme başlığındaki "PDF İndir" butonuyla doğrudan PDF olarak indirin
 

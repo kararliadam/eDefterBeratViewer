@@ -1,135 +1,93 @@
-/* Yazdırma penceresi açmadan tarayıcı içinde doğrudan PDF dışa aktarımı. */
+/* Chromium yazdırma motoruyla önizleme açmadan PDF kaydı. */
 (function () {
-    let libraryPromise = null;
+    function pageStyle(doc) {
+        if (doc.querySelector('style[data-print-page]')) {
+            return;
+        }
+        const style = doc.createElement('style');
+        style.setAttribute('data-print-page', 'true');
+        style.textContent = '@page { size: A4 portrait; margin: 10mm; }';
+        doc.head.appendChild(style);
+    }
 
-    function loadScript(src, isReady) {
+    function previewHtml() {
+        const preview = document.getElementById('htmlPreview');
+        const doc = preview && preview.contentDocument;
+        if (!doc || !doc.body || !doc.body.innerHTML.trim()) {
+            return '';
+        }
+        pageStyle(doc);
+        return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    }
+
+    function wrapHtml(html) {
+        if (!html) {
+            return '';
+        }
+        if (/<html[\s>]/i.test(html)) {
+            return html;
+        }
+        return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page { size: A4 portrait; margin: 10mm; }</style></head><body>${html}</body></html>`;
+    }
+
+    function printFallback(html, pdfName) {
+        const frame = document.createElement('iframe');
+        frame.style.position = 'fixed';
+        frame.style.width = '0';
+        frame.style.height = '0';
+        frame.style.border = '0';
+        document.body.appendChild(frame);
         return new Promise((resolve, reject) => {
-            if (isReady()) {
+            frame.onload = () => {
+                const doc = frame.contentDocument;
+                doc.title = pdfName.replace(/\.pdf$/i, '');
+                pageStyle(doc);
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
                 resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = new URL(src, window.location.href).href;
-            script.onload = () => isReady()
-                ? resolve()
-                : reject(new Error('PDF kütüphanesi başlatılamadı.'));
-            script.onerror = () => reject(new Error('PDF kütüphanesi yüklenemedi.'));
-            document.head.appendChild(script);
+            };
+            frame.onerror = () => reject(new Error('PDF kaydedilemedi.'));
+            frame.src = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
         });
     }
 
-    function loadPdfLibrary() {
-        if (libraryPromise) {
-            return libraryPromise;
+    function downloadPdfData(base64, pdfName) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+            bytes[index] = binary.charCodeAt(index);
         }
-
-        // Use the two primitives directly. html2pdf's worker occasionally
-        // produced an empty page inside extension documents even though the
-        // same canvas rendered correctly; direct jsPDF output avoids that
-        // opaque worker/pagination path.
-        libraryPromise = loadScript(
-            'vendor/html2canvas.min.js',
-            () => typeof window.html2canvas === 'function'
-        ).then(() => loadScript(
-            'vendor/jspdf.umd.min.js',
-            () => Boolean(window.jspdf && typeof window.jspdf.jsPDF === 'function')
-        ));
-
-        return libraryPromise;
-    }
-
-    function createPdfSource(htmlContent) {
-        const source = document.createElement('div');
-        source.setAttribute('data-pdf-export', 'true');
-        source.innerHTML = `
-            <style>
-                * { font-family: 'Open Sans', 'DejaVu Sans', Arial, sans-serif !important; }
-                html, body { margin: 0; padding: 0; background: #fff; }
-                @page { size: A4; margin: 10mm 5mm; }
-            </style>
-            ${htmlContent}`;
-        // Keep the source in normal document flow so html2canvas measures its
-        // height correctly, while translating it outside the viewport. The
-        // clone is moved back to the origin during capture below.
-        source.style.position = 'static';
-        source.style.width = '794px';
-        source.style.transform = 'translateX(-10000px)';
-        source.style.background = '#fff';
-        source.style.color = '#000';
-        document.body.appendChild(source);
-        return source;
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = pdfName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     window.downloadHtmlAsPdf = async function (htmlContent, originalFileName) {
-        await loadPdfLibrary();
-        if (document.fonts && document.fonts.ready) {
-            await document.fonts.ready;
-        }
-
-        const source = createPdfSource(htmlContent);
         const pdfName = originalFileName.replace(/\.[^.]+$/i, '.pdf');
-        try {
-            const canvas = await window.html2canvas(source, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                onclone: (clonedDocument) => {
-                    const clonedSource = clonedDocument.querySelector('[data-pdf-export]');
-                    if (!clonedSource) {
-                        return;
-                    }
-                    // Keep the live source off-screen, but render the clone at
-                    // the origin so its measured canvas has a real height.
-                    clonedSource.style.position = 'static';
-                    clonedSource.style.transform = 'none';
-                    clonedSource.style.width = '794px';
-                }
-            });
-
-            if (!canvas.width || !canvas.height) {
-                throw new Error('PDF için içerik kanvası oluşturulamadı.');
-            }
-
-            const pdf = new window.jspdf.jsPDF({
-                unit: 'mm',
-                format: 'a4',
-                orientation: 'portrait',
-                compress: true
-            });
-            const imageData = canvas.toDataURL('image/jpeg', 0.98);
-            const pageWidth = 190;
-            const pageHeight = 277;
-            const imageHeight = canvas.height * pageWidth / canvas.width;
-            let offset = 0;
-            let pageNumber = 0;
-
-            while (offset < imageHeight) {
-                if (pageNumber > 0) {
-                    pdf.addPage();
-                }
-                pdf.addImage(imageData, 'JPEG', 5, 10 - offset, pageWidth, imageHeight, undefined, 'FAST');
-                offset += pageHeight;
-                pageNumber += 1;
-            }
-
-            const blob = pdf.output('blob');
-            if (!blob || blob.size < 5000) {
-                throw new Error('PDF boş oluşturuldu. Lütfen tekrar deneyin.');
-            }
-
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = pdfName;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-        } finally {
-            source.remove();
+        const html = previewHtml() || wrapHtml(htmlContent);
+        if (!html) {
+            throw new Error('Yazdırılacak önizleme bulunamadı.');
         }
+
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+            const response = await chrome.runtime.sendMessage({
+                type: 'savePreviewPdf',
+                html,
+                fileName: pdfName
+            });
+            if (!response || !response.ok || !response.data) {
+                throw new Error((response && response.error) || 'PDF kaydedilemedi.');
+            }
+            downloadPdfData(response.data, pdfName);
+            return;
+        }
+
+        await printFallback(html, pdfName);
     };
 })();

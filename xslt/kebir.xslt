@@ -49,6 +49,7 @@
 						font-family:'Open Sans', 'DejaVu Sans', 'Arial', 'Arial Narrow', sans-serif; 
 						font-size:12px; 
 					}
+					@page { size: A4 portrait; margin: 10mm; }
 					table.tablo1{
 						border-collapse:collapse; 
 						empty-cells:show; 
@@ -99,7 +100,9 @@
 		<xsl:apply-templates select="gl-cor:entityInformation"/>
 		<xsl:apply-templates select="gl-cor:documentInfo"/>
 		<xsl:call-template name="baslikYaz"/>
-		<xsl:apply-templates select="gl-cor:entryHeader"/>
+		<xsl:for-each select="gl-cor:entryHeader">
+			<xsl:apply-templates select="."/>
+		</xsl:for-each>
 		<xsl:call-template name="genelToplamYaz"/>
 	</xsl:template>
 	<xsl:template match="gl-cor:entityInformation">
@@ -232,11 +235,66 @@
 				</xsl:with-param>
 			</xsl:call-template>
 			<tbody>
-				<xsl:call-template name="satirlariYaz">
-					<xsl:with-param name="kumulatifDebit">0</xsl:with-param>
-					<xsl:with-param name="kumulatifCredit">0</xsl:with-param>
-					<xsl:with-param name="entryDetail" select="gl-cor:entryDetail[1]"/>
-				</xsl:call-template>
+				<xsl:for-each select="gl-cor:entryDetail">
+					<xsl:variable name="debit">
+						<xsl:choose>
+							<xsl:when test="gl-cor:debitCreditCode = 'D' or gl-cor:debitCreditCode = 'debit'">
+								<xsl:value-of select="normalize-space(gl-cor:amount)"/>
+							</xsl:when>
+							<xsl:otherwise>
+								<xsl:text>0</xsl:text>
+							</xsl:otherwise>
+						</xsl:choose>
+					</xsl:variable>
+					<xsl:variable name="credit">
+						<xsl:choose>
+							<xsl:when test="gl-cor:debitCreditCode = 'C' or gl-cor:debitCreditCode = 'credit'">
+								<xsl:value-of select="normalize-space(gl-cor:amount)"/>
+							</xsl:when>
+							<xsl:otherwise>
+								<xsl:text>0</xsl:text>
+							</xsl:otherwise>
+						</xsl:choose>
+					</xsl:variable>
+					<tr>
+						<td style="text-align:center;">
+							<xsl:call-template name="convertDate">
+								<xsl:with-param name="postingDate" select="gl-cor:postingDate"/>
+							</xsl:call-template>
+						</td>
+						<td>
+							<xsl:value-of select="gl-cor:lineNumberCounter"/>
+						</td>
+						<td style="text-align:left;">
+							<xsl:value-of select="gl-cor:account[1]/gl-cor:accountSub[1]/gl-cor:accountSubID[1]"/>
+						</td>
+						<td style="text-align:left;">
+							<xsl:value-of select="gl-cor:account[1]/gl-cor:accountSub[1]/gl-cor:accountSubDescription[1]"/>
+						</td>
+						<td style="text-align:left;">
+							<xsl:value-of select="gl-cor:documentReference"/>
+						</td>
+						<td style="text-align:left;">
+							<xsl:value-of select="gl-cor:detailComment"/>
+						</td>
+						<td>
+							<xsl:text>&#160;</xsl:text>
+							<xsl:value-of select="format-number(number($debit), '###.##0,00', 'tryFormat')"/>
+						</td>
+						<td>
+							<xsl:text>&#160;</xsl:text>
+							<xsl:value-of select="format-number(number($credit), '###.##0,00', 'tryFormat')"/>
+						</td>
+						<td style="font-weight:bold;">
+							<xsl:text>&#160;</xsl:text>
+							<xsl:value-of select="format-number(sum(preceding-sibling::*[local-name()='entryDetail'][gl-cor:debitCreditCode = 'D' or gl-cor:debitCreditCode = 'debit']/gl-cor:amount) + number($debit), '###.##0,00', 'tryFormat')"/>
+						</td>
+						<td style="font-weight:bold;">
+							<xsl:text>&#160;</xsl:text>
+							<xsl:value-of select="format-number(sum(preceding-sibling::*[local-name()='entryDetail'][gl-cor:debitCreditCode = 'C' or gl-cor:debitCreditCode = 'credit']/gl-cor:amount) + number($credit), '###.##0,00', 'tryFormat')"/>
+						</td>
+					</tr>
+				</xsl:for-each>
 			</tbody>
 			<xsl:call-template name="entryHeaderSonyaz">
 				<xsl:with-param name="totalDebit">
@@ -284,85 +342,6 @@
 				</th>
 			</tr>
 		</thead>
-	</xsl:template>
-	<xsl:template name="satirlariYaz">
-		<xsl:param name="kumulatifDebit"/>
-		<xsl:param name="kumulatifCredit"/>
-		<xsl:param name="entryDetail"/>
-		<xsl:variable name="debit">
-			<xsl:choose>
-				<xsl:when test="$entryDetail/gl-cor:debitCreditCode = 'D' or $entryDetail/gl-cor:debitCreditCode = 'debit'">
-					<xsl:value-of select="normalize-space($entryDetail/gl-cor:amount)"/>
-				</xsl:when>
-				<xsl:otherwise>
-					<xsl:text>0</xsl:text>
-				</xsl:otherwise>
-			</xsl:choose>
-		</xsl:variable>
-		<xsl:variable name="credit">
-			<xsl:choose>
-				<xsl:when test="$entryDetail/gl-cor:debitCreditCode = 'C' or $entryDetail/gl-cor:debitCreditCode = 'credit'">
-					<xsl:value-of select="normalize-space($entryDetail/gl-cor:amount)"/>
-				</xsl:when>
-				<xsl:otherwise>
-					<xsl:text>0</xsl:text>
-				</xsl:otherwise>
-			</xsl:choose>
-		</xsl:variable>
-		<tr>
-			<td style="text-align:center;">
-				<xsl:call-template name="convertDate">
-					<xsl:with-param name="postingDate" select="$entryDetail/gl-cor:postingDate"/>
-				</xsl:call-template>
-			</td>
-			<td>
-				<xsl:value-of select="$entryDetail/gl-cor:lineNumberCounter"/>
-			</td>
-			<td style="text-align:left;">
-				<xsl:value-of select="$entryDetail/gl-cor:account[1]/gl-cor:accountSub[1]/gl-cor:accountSubID[1]"/>
-			</td>
-			<td style="text-align:left;">
-				<xsl:value-of select="$entryDetail/gl-cor:account[1]/gl-cor:accountSub[1]/gl-cor:accountSubDescription[1]"/>
-			</td>
-			<td style="text-align:left;">
-				<xsl:value-of select="$entryDetail/gl-cor:documentReference"/>
-			</td>
-			<td style="text-align:left;">
-				<xsl:value-of select="$entryDetail/gl-cor:detailComment"/>
-			</td>
-			<td>
-				<xsl:text>&#160;</xsl:text>
-				<xsl:value-of select="format-number(number($debit), '###.##0,00', 'tryFormat')"/>
-			</td>
-			<td>
-				<xsl:text>&#160;</xsl:text>
-				<xsl:value-of select="format-number(number($credit), '###.##0,00', 'tryFormat')"/>
-			</td>
-			<td style="font-weight:bold;">
-				<xsl:text>&#160;</xsl:text>
-				<xsl:value-of select="format-number(number($debit+$kumulatifDebit), '###.##0,00', 'tryFormat')"/>
-			</td>
-			<td style="font-weight:bold;">
-				<xsl:text>&#160;</xsl:text>
-				<xsl:value-of select="format-number(number($credit+$kumulatifCredit), '###.##0,00', 'tryFormat')"/>
-			</td>
-		</tr>
-		<xsl:variable name="nextNode" select="$entryDetail/following-sibling::node()[local-name()=local-name($entryDetail)][1]">
-
-		</xsl:variable>
-		<xsl:choose>
-			<xsl:when test="$nextNode">
-				<xsl:call-template name="satirlariYaz">
-					<xsl:with-param name="kumulatifDebit">
-						<xsl:value-of select="$debit + $kumulatifDebit"/>
-					</xsl:with-param>
-					<xsl:with-param name="kumulatifCredit">
-						<xsl:value-of select="$credit + $kumulatifCredit"/>
-					</xsl:with-param>
-					<xsl:with-param name="entryDetail" select="$nextNode"/>
-				</xsl:call-template>
-			</xsl:when>
-		</xsl:choose>
 	</xsl:template>
 	<xsl:template name="entryHeaderSonyaz">
 		<xsl:param name="totalDebit"/>

@@ -1,15 +1,18 @@
 {
   "manifest_version": 3,
   "name": "eDefter Berat Görüntüleyici",
-  "version": "1.0.0",
+  "version": "1.0.9",
   "description": "e-Defter berat XML ve ZIP dosyalarını geniş ekranda görüntüler ve PDF olarak indirir",
   "permissions": [
     "storage",
     "tabs",
-    "contextMenus"
+    "contextMenus",
+    "debugger",
+    "downloads",
+    "unlimitedStorage"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:;"
   },
   "host_permissions": [
     "file://*/*"

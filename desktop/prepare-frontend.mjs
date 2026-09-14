@@ -13,6 +13,8 @@ const files = [
   'desktop-bridge.js',
   'xslt-transform.js',
   'pdf-export.js',
+  'print-page.html',
+  'print-page.js',
 ];
 
 const directories = ['vendor', 'xslt'];
