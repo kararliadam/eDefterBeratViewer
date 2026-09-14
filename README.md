@@ -51,7 +51,7 @@ Eklentinin simge dosyalarını eklemek için:
 Windows 10 veya 11 ve WebView2 gerekir (güncel Windows sürümlerinde genelde yüklüdür).
 
 1. GitHub Actions `Windows desktop` işinin ürettiği NSIS kurulumunu indirin veya proje kökünde `npm run build` çalıştırın
-2. `eDefter Berat Goruntuleyici_1.0.9_x64-setup.exe` dosyasını çalıştırın
+2. `eDefter Berat Goruntuleyici_1.0.10_x64-setup.exe` dosyasını çalıştırın
 3. Kurulumdan sonra bir `.xml` veya `.zip` dosyasına sağ tıklayıp **Berat Görüntüleyici ile aç** seçin
 4. Windows 11 kısa menüsünde seçenek görünmezse **Daha fazla seçenek göster** ile klasik menüyü açın
 
@@ -65,11 +65,11 @@ npm run build
 
 Kurulum dosyası `desktop/src-tauri/target/release/bundle/nsis/` altında oluşur. Windows uygulamasını macOS veya Linux üzerinde paketlemek desteklenmez; paketleme Windows'ta veya GitHub Actions ile yapılır.
 
-GitHub Release için sürüm etiketini push edin. `Windows desktop` işi kurulumu derler ve `v1.0.9` gibi etiketlerde Release sayfasına ekler:
+GitHub Release için sürüm etiketini push edin. `Windows desktop` işi kurulumu derler ve `v1.0.10` gibi etiketlerde Release sayfasına ekler:
 
 ```
-git tag v1.0.9
-git push origin v1.0.9
+git tag v1.0.10
+git push origin v1.0.10
 ```
 
 ## Kullanım

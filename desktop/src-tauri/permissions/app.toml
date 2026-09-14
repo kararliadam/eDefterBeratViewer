@@ -7,3 +7,8 @@ commands.allow = ["get_pending_file_path"]
 identifier = "allow-read-launch-file"
 description = "Allow reading an XML or ZIP file chosen by the user"
 commands.allow = ["read_launch_file"]
+
+[[permission]]
+identifier = "allow-save-preview-pdf"
+description = "Allow saving the current preview as a PDF file"
+commands.allow = ["save_preview_pdf"]

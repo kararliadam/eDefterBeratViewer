@@ -7,6 +7,7 @@
     "core:default",
     "core:event:default",
     "allow-get-pending-file-path",
-    "allow-read-launch-file"
+    "allow-read-launch-file",
+    "allow-save-preview-pdf"
   ]
 }

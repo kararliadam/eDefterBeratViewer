@@ -75,6 +75,12 @@
             throw new Error('Yazdırılacak önizleme bulunamadı.');
         }
 
+        const tauri = window.__TAURI__;
+        if (tauri && tauri.core && typeof tauri.core.invoke === 'function') {
+            await tauri.core.invoke('save_preview_pdf', { html, fileName: pdfName });
+            return;
+        }
+
         if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
             const response = await chrome.runtime.sendMessage({
                 type: 'savePreviewPdf',

@@ -1,7 +1,9 @@
 mod context_menu;
 mod file_open;
+mod pdf_export;
 
 use file_open::{extract_file_path, get_pending_file_path, read_launch_file, LaunchState};
+use pdf_export::save_preview_pdf;
 use tauri::{Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -31,7 +33,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_pending_file_path,
-            read_launch_file
+            read_launch_file,
+            save_preview_pdf
         ])
         .run(tauri::generate_context!())
         .expect("eDefter Berat Görüntüleyici başlatılamadı");

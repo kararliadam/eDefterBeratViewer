@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "eDefter Berat Görüntüleyici",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "e-Defter berat XML ve ZIP dosyalarını geniş ekranda görüntüler ve PDF olarak indirir",
   "permissions": [
     "storage",
