@@ -3,6 +3,14 @@
 
 # Local test archive
 /01.01.2024-31.12.2024.zip
+/OCAK 2026.zip
 
 # Packaged extension builds
 /dist/
+
+# Desktop (Tauri) build artifacts
+/desktop/dist/
+/desktop/node_modules/
+/desktop/src-tauri/target/
+/desktop/src-tauri/gen/
+/desktop/release/

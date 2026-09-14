@@ -1,0 +1,16 @@
+{
+  "name": "berat-goruntuleyici-desktop",
+  "private": true,
+  "version": "1.0.10",
+  "description": "Windows desktop wrapper for eDefter Berat Görüntüleyici",
+  "scripts": {
+    "prepare-frontend": "node prepare-frontend.mjs",
+    "dev": "npm run prepare-frontend && tauri dev",
+    "build": "npm run prepare-frontend && tauri build",
+    "build:windows": "npm run prepare-frontend && LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

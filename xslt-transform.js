@@ -27,7 +27,33 @@
         }
     }
 
+    function isDesktopApp() {
+        return Boolean(window.__TAURI__) ||
+            window.location.protocol === 'tauri:' ||
+            window.location.hostname === 'tauri.localhost';
+    }
+
+    function hasNativeXslt() {
+        return typeof window.XSLTProcessor === 'function' &&
+            window.XSLTProcessor.prototype &&
+            typeof window.XSLTProcessor.prototype.transformToDocument === 'function';
+    }
+
+    function shouldUsePolyfill() {
+        return !(isDesktopApp() && hasNativeXslt());
+    }
+
+    function isStackOverflow(error) {
+        const message = String(error && error.message || error);
+        return error instanceof RangeError ||
+            /Maximum call stack size exceeded|too much recursion|call stack exhausted/i.test(message);
+    }
+
     function ensureXsltPolyfill() {
+        if (!shouldUsePolyfill()) {
+            return Promise.resolve();
+        }
+
         if (polyfillPromise) {
             return polyfillPromise;
         }
@@ -81,9 +107,136 @@
             throw new Error('XSLT parse hatası: ' + xsltError.textContent);
         }
 
+        try {
+            return transformDocument(xmlDoc, xsltDoc);
+        } catch (error) {
+            if (!isStackOverflow(error)) {
+                throw error;
+            }
+            return transformDocumentInChunks(xmlDoc, xsltDoc);
+        }
+    };
+
+    function transformDocument(xmlDoc, xsltDoc) {
         const processor = new window.XSLTProcessor();
         processor.importStylesheet(xsltDoc);
         const resultDoc = processor.transformToDocument(xmlDoc);
-        return new XMLSerializer().serializeToString(resultDoc);
-    };
+        return serializeDocument(resultDoc);
+    }
+
+    function serializeDocument(resultDoc) {
+        try {
+            return new XMLSerializer().serializeToString(resultDoc);
+        } catch (error) {
+            if (!isStackOverflow(error)) {
+                throw error;
+            }
+            const root = resultDoc.documentElement || resultDoc;
+            return serializeNodeIterative(root);
+        }
+    }
+
+    function serializeNodeIterative(root) {
+        const parts = [];
+        const stack = [{ node: root, close: false }];
+
+        while (stack.length > 0) {
+            const item = stack.pop();
+            const node = item.node;
+
+            if (item.close) {
+                parts.push('</' + node.nodeName + '>');
+                continue;
+            }
+
+            if (node.nodeType === Node.TEXT_NODE) {
+                parts.push(escapeXml(node.nodeValue || ''));
+                continue;
+            }
+
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                continue;
+            }
+
+            let open = '<' + node.nodeName;
+            const attributes = node.attributes || [];
+            for (let index = 0; index < attributes.length; index += 1) {
+                const attribute = attributes[index];
+                open += ' ' + attribute.name + '="' + escapeXml(attribute.value) + '"';
+            }
+            open += '>';
+            parts.push(open);
+            stack.push({ node, close: true });
+
+            const children = [];
+            for (let child = node.lastChild; child; child = child.previousSibling) {
+                children.push({ node: child, close: false });
+            }
+            for (let index = 0; index < children.length; index += 1) {
+                stack.push(children[index]);
+            }
+        }
+
+        return parts.join('');
+    }
+
+    function escapeXml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function transformDocumentInChunks(xmlDoc, xsltDoc) {
+        const headers = Array.from(xmlDoc.getElementsByTagNameNS(
+            'http://www.xbrl.org/int/gl/cor/2006-10-25',
+            'entryHeader'
+        ));
+        if (headers.length < 2) {
+            throw new Error('Belge dönüşümü tamamlanamadı.');
+        }
+
+        const parent = headers[0].parentNode;
+        const detached = headers.slice();
+        for (let index = 0; index < detached.length; index += 1) {
+            parent.removeChild(detached[index]);
+        }
+
+        try {
+            const chunkSize = 25;
+            const bodies = [];
+            for (let offset = 0; offset < detached.length; offset += chunkSize) {
+                const batch = detached.slice(offset, offset + chunkSize);
+                for (let index = 0; index < batch.length; index += 1) {
+                    parent.appendChild(batch[index]);
+                }
+                const html = transformDocument(xmlDoc, xsltDoc);
+                const body = extractHtmlBody(html);
+                bodies.push(offset === 0 ? body : stripRepeatedChrome(body));
+                for (let index = 0; index < batch.length; index += 1) {
+                    parent.removeChild(batch[index]);
+                }
+            }
+            return wrapHtmlBodies(bodies);
+        } finally {
+            for (let index = 0; index < detached.length; index += 1) {
+                parent.appendChild(detached[index]);
+            }
+        }
+    }
+
+    function extractHtmlBody(html) {
+        const match = String(html).match(/<body\b[^>]*>([\s\S]*)<\/body>/i);
+        return match ? match[1] : html;
+    }
+
+    function stripRepeatedChrome(bodyHtml) {
+        const withoutHeaderTables = bodyHtml.replace(/<table\b[^>]*>[\s\S]*?<\/table>/i, '');
+        return withoutHeaderTables;
+    }
+
+    function wrapHtmlBodies(bodies) {
+        return '<html><body>' + bodies.join('') + '</body></html>';
+    }
 })();

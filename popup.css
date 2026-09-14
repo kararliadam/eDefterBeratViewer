@@ -219,7 +219,7 @@ main {
 
 .archive-filters {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     margin-bottom: 10px;
 }
@@ -286,7 +286,7 @@ main {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-@media (max-width: 420px) {
+@media (max-width: 640px) {
     .archive-filters {
         grid-template-columns: 1fr;
     }

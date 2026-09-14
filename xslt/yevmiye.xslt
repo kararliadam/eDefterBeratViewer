@@ -50,6 +50,7 @@
 						font-family:'Open Sans', 'DejaVu Sans', 'Arial', 'Arial Narrow', sans-serif; 
 						font-size:10pt; 
 					}
+					@page { size: A4 portrait; margin: 10mm; }
 
 					table.pageHeader1{
 						border:0; 
@@ -150,7 +151,9 @@
 		<xsl:apply-templates select="gl-cor:entityInformation"/>
 		<xsl:apply-templates select="gl-cor:documentInfo"/>
 		<xsl:call-template name="printPageHeader"/>
-		<xsl:apply-templates select="gl-cor:entryHeader"/>
+		<xsl:for-each select="gl-cor:entryHeader">
+			<xsl:apply-templates select="."/>
+		</xsl:for-each>
 		<xsl:call-template name="printPageFooter"/>
 	</xsl:template>
 	<!-- gl-cor:entityInformation -->
@@ -342,7 +345,9 @@
 	<!-- gl-cor:entryHeader -->
 	<xsl:template match="gl-cor:entryHeader">
 		<xsl:call-template name="printEntryHeaderHeader"/>
-		<xsl:apply-templates select="gl-cor:entryDetail"/>
+		<xsl:for-each select="gl-cor:entryDetail">
+			<xsl:apply-templates select="."/>
+		</xsl:for-each>
 		<xsl:call-template name="printEntryHeaderFooter"/>
 	</xsl:template>
 	<!-- printEntryHeaderHeader -->

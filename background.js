@@ -133,3 +133,68 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         }
     }
 });
+
+function waitForBlobTab(timeoutMs, isPrintTab) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            chrome.tabs.onUpdated.removeListener(onUpdated);
+            reject(new Error('PDF sayfası hazırlanamadı.'));
+        }, timeoutMs);
+
+        function onUpdated(id, info, tab) {
+            if (!isPrintTab(id)) {
+                return;
+            }
+            if (info.status === 'complete' && tab.url && tab.url.startsWith('blob:')) {
+                clearTimeout(timer);
+                chrome.tabs.onUpdated.removeListener(onUpdated);
+                resolve(id);
+            }
+        }
+
+        chrome.tabs.onUpdated.addListener(onUpdated);
+    });
+}
+
+async function savePreviewPdf(html, fileName) {
+    const safeName = String(fileName || 'belge.pdf').replace(/[\\/:*?"<>|]/g, '_');
+    await chrome.storage.local.set({ printHtml: html, printFileName: safeName });
+    const tabRef = { id: null };
+    const loaded = waitForBlobTab(120000, id => tabRef.id === null || tabRef.id === id);
+    const tab = await chrome.tabs.create({
+        url: chrome.runtime.getURL('print-page.html'),
+        active: false
+    });
+    tabRef.id = tab.id;
+    const printTabId = await loaded;
+
+    await chrome.debugger.attach({ tabId: printTabId }, '1.3');
+    try {
+        await chrome.debugger.sendCommand({ tabId: printTabId }, 'Runtime.evaluate', {
+            expression: 'document.fonts && document.fonts.ready || Promise.resolve()',
+            awaitPromise: true
+        });
+        const result = await chrome.debugger.sendCommand({ tabId: printTabId }, 'Page.printToPDF', {
+            printBackground: true,
+            preferCSSPageSize: true,
+            paperWidth: 8.27,
+            paperHeight: 11.69
+        });
+        return result.data;
+    } finally {
+        chrome.debugger.detach({ tabId: printTabId }).catch(() => {});
+        chrome.tabs.remove(printTabId).catch(() => {});
+        chrome.storage.local.remove(['printHtml', 'printFileName']);
+    }
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (!message || message.type !== 'savePreviewPdf') {
+        return;
+    }
+    savePreviewPdf(message.html, message.fileName)
+        .then(data => sendResponse({ ok: true, data }))
+        .catch(error => sendResponse({ ok: false, error: error && error.message ? error.message : String(error) }));
+    return true;
+});
+

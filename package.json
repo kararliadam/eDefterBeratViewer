@@ -1,0 +1,8 @@
+{
+  "name": "edefter-berat-goruntuleyici",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix desktop install && npm --prefix desktop run dev",
+    "build": "npm --prefix desktop install && npm --prefix desktop run build"
+  }
+}
